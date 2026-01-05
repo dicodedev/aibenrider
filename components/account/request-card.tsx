@@ -17,7 +17,7 @@ export const RequestCard = ({ index }: { index: number }) => {
   const [liked, setLiked] = useState(false);
   return (
     <Pressable
-      onPress={() => router.push("/account/marketplace/category/1")}
+      onPress={() => router.push("/account/dashboard/trip-details")}
       key={index}
       style={{
         flexDirection: "row",

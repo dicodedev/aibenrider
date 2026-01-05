@@ -34,6 +34,7 @@ export default function ProfileComponent() {
           style={{
             flex: 1,
           }}
+          showsVerticalScrollIndicator={false}
         >
           <View
             style={{

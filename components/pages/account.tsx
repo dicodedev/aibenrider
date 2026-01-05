@@ -25,7 +25,7 @@ const options = [
       </Svg>
     ),
     text: "Profile",
-    link: "/account/marketplace/account/profile",
+    link: "/account/dashboard/account/profile",
   },
   {
     icon: (
@@ -40,7 +40,7 @@ const options = [
       </Svg>
     ),
     text: "Location Settings",
-    link: "/account/marketplace/account/locations",
+    link: "/account/dashboard/account/locations",
   },
   {
     icon: (
@@ -55,7 +55,7 @@ const options = [
       </Svg>
     ),
     text: "Notification Settings",
-    link: "/account/marketplace/account/notifications",
+    link: "/account/dashboard/account/notifications",
   },
   {
     icon: (
@@ -77,7 +77,7 @@ const options = [
       </Svg>
     ),
     text: "Terms & Conditions",
-    link: "/account/marketplace/account/terms",
+    link: "/account/dashboard/account/terms",
   },
   {
     icon: (
@@ -92,7 +92,7 @@ const options = [
       </Svg>
     ),
     text: "Sign Out",
-    link: "account/marketplace/account/sign-out",
+    link: "account/dashboard/account/sign-out",
   },
 ];
 

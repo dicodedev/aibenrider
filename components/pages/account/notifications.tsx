@@ -56,7 +56,7 @@ export default function NoticationsComponent() {
       >
         <Pressable
           onPress={() =>
-            router.push("/account/marketplace/account/add-location")
+            router.push("/account/dashboard/account/add-location")
           }
           style={{
             width: "100%",

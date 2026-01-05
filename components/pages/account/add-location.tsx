@@ -399,7 +399,7 @@ export default function AddLocationComponent() {
                 </View>
                 <Pressable
                   onPress={() =>
-                    router.push("/account/marketplace/account/select-location")
+                    router.push("/account/dashboard/account/select-location")
                   }
                   style={{
                     flexDirection: "row",

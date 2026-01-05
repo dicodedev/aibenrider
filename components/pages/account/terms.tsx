@@ -68,6 +68,7 @@ export default function TermsComponent() {
           style={{
             flex: 1,
           }}
+          showsVerticalScrollIndicator={false}
         >
           {/* NAV */}
           <View
