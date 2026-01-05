@@ -49,20 +49,16 @@ export default function index() {
     loadOnboardedStatus();
   }, []);
 
-  if (token) {
-    return <Redirect href="/account/marketplace" />;
+  if (!token) {
+    return <Redirect href="/account/dashboard" />;
   } else if (onboarded) {
     return <Redirect href="/login" />;
   } else {
-    return step == 1 ? (
-      <First setStep={setStep} />
-    ) : (
-      <Last slideView={slideView} ViewOpacity={ViewOpacity} />
-    );
+    return <First />;
   }
 }
 
-const First = ({ setStep }) => {
+const First = () => {
   const sizeAmin = useRef(new Animated.Value(1)).current; // start off-screen
   const radiusAmin = useRef(new Animated.Value(0)).current; // start off-screen
   const slideAnim = useRef(new Animated.Value(300)).current; // start off-screen

@@ -1,21 +1,19 @@
 import {
+  Animated,
   Image,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 
 import { GlowBG } from "@/components/account/glow-bg";
 import { Menu } from "@/components/account/menu";
-import { ProductCard } from "@/components/account/product-card";
-import { filter, location, searchIcon } from "@/icons";
+import { RequestCard } from "@/components/account/request-card";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { SvgXml } from "react-native-svg";
 import { useSelector } from "react-redux";
 
 const colors = ["#FFE4C3", "#E0FAD5", "#FFD0DA", "#D4E0FF"];
@@ -41,6 +39,7 @@ export default function HomeScreen() {
             padding: 0,
             height: "100%",
           }}
+          showsVerticalScrollIndicator={false}
         >
           <View
             style={{
@@ -58,105 +57,96 @@ export default function HomeScreen() {
               <Menu />
               <View
                 style={{
-                  flexDirection: "row",
-                  gap: 15,
-                  alignItems: "center",
+                  width: 50,
+                  height: 50,
+                  borderRadius: "100%",
                 }}
               >
-                <SvgXml xml={location()} width={17} height={21} />
-                <View style={{ alignSelf: "flex-start" }}>
-                  <Text
-                    style={{
-                      fontSize: 16,
-                      fontFamily: "HostGrotesk",
-                      minWidth: 150,
-                    }}
-                  >
-                    Ikoyi, Lagos State
-                  </Text>
-                </View>
-              </View>
-            </View>
-            <Text
-              style={{
-                fontSize: 45,
-                fontFamily: "HostGroteskBold",
-                lineHeight: 55,
-              }}
-            >
-              Get the best
-            </Text>
-            <Text
-              style={{
-                fontSize: 45,
-                lineHeight: 55,
-                fontFamily: "HostGroteskBold",
-              }}
-            >
-              Deals at great
-            </Text>
-            <Text
-              style={{
-                fontSize: 45,
-                lineHeight: 55,
-                fontFamily: "HostGroteskBold",
-              }}
-            >
-              Price.
-            </Text>
-            <View
-              style={{
-                marginTop: 30,
-                flexDirection: "row",
-                gap: 20,
-                alignItems: "center",
-              }}
-            >
-              <Pressable
-                style={{
-                  width: 55,
-                  height: 55,
-                  backgroundColor: "#FBAF41",
-                  borderRadius: 10,
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-              >
-                <SvgXml xml={filter()} width={15} height={15} />
-              </Pressable>
-              <View
-                style={{
-                  flexDirection: "row",
-                  backgroundColor: "#EAEAEA",
-                  flex: 1,
-                  padding: 10,
-                  paddingHorizontal: 20,
-                  borderRadius: 10,
-                  gap: 15,
-                  alignItems: "center",
-                }}
-              >
-                <SvgXml xml={searchIcon()} width={17} height={17} />
-                <TextInput
+                <Image
+                  source={{ uri: "https://avatar.iran.liara.run/public" }}
                   style={{
-                    fontFamily: "HostGrotesk",
-                    fontSize: 16,
-                    flex: 1,
+                    width: "100%",
+                    height: "100%",
+                    borderRadius: 100,
                   }}
-                  placeholderTextColor={"#7D7D7D"}
-                  selectionColor={"#A09F9F"}
-                  placeholder="Search Marketplace"
-                  keyboardType="ascii-capable"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  textContentType="name"
-                  value={search}
-                  onChangeText={setSearch}
                 />
               </View>
             </View>
+            <View
+              style={{
+                marginTop: 20,
+                marginBottom: 10,
+                flexDirection: "row",
+                gap: 30,
+                alignItems: "center",
+              }}
+            >
+              <CustomSwitch />
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontFamily: "HostGrotesk",
+                  fontStyle: "italic",
+                }}
+              >
+                Available for trips
+              </Text>
+            </View>
+            <View
+              style={{
+                marginTop: 20,
+                marginBottom: 10,
+                flexDirection: "row",
+                gap: 3,
+                alignItems: "center",
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontFamily: "Outfit",
+                }}
+              >
+                Welcome back,
+              </Text>
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontFamily: "OutfitBold",
+                }}
+              >
+                Jacob
+              </Text>
+            </View>
+            <Text
+              style={{
+                fontSize: 45,
+                fontFamily: "HostGroteskBold",
+                lineHeight: 55,
+              }}
+            >
+              Pick up rides.
+            </Text>
+            <Text
+              style={{
+                fontSize: 45,
+                lineHeight: 55,
+                fontFamily: "HostGroteskBold",
+              }}
+            >
+              Deliver goods.
+            </Text>
+            <Text
+              style={{
+                fontSize: 45,
+                lineHeight: 55,
+                fontFamily: "HostGroteskBold",
+              }}
+            >
+              Get paid.
+            </Text>
 
-            {/* CATEGORIES */}
+            {/* REQUESTS */}
             <View
               style={{
                 flexDirection: "row",
@@ -169,13 +159,13 @@ export default function HomeScreen() {
                 style={{
                   fontSize: 24,
                   fontFamily: "HostGroteskBold",
-                  width: 150,
+                  flex: 1,
                 }}
               >
-                Categories
+                Available Requests
               </Text>
               <Pressable
-                onPress={() => router.push("/account/marketplace/categories")}
+                onPress={() => router.push("/account/dashboard/trips")}
               >
                 <Text
                   style={{
@@ -192,166 +182,85 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{
-              flexDirection: "row",
-              marginTop: 15,
-              paddingLeft: 15,
-            }}
-          >
-            {[1, 2, 3, 4, 5].map((item, key) => (
-              <Pressable
-                onPress={() => router.push("/account/marketplace/category/1")}
-                key={item}
-                style={{
-                  flexDirection: "row",
-                  gap: 10,
-                  backgroundColor: colors[key % colors.length],
-                  padding: 10,
-                  paddingHorizontal: 20,
-                  marginRight: 20,
-                  alignItems: "center",
-                  borderRadius: 12,
-                }}
-              >
-                <Image
-                  source={{ uri: "https://avatar.iran.liara.run/public" }}
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 100,
-                  }}
-                />
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontFamily: "HostGroteskBold",
-                  }}
-                >
-                  Shoes
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-
-          {/* ARRIVAL PRODUCTS */}
           <View
             style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginTop: 30,
-              paddingHorizontal: 15,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 18,
-                fontFamily: "HostGroteskBold",
-                width: 150,
-              }}
-            >
-              New Arrivals
-            </Text>
-            <Pressable
-              onPress={() => router.push("/account/marketplace/category/1")}
-            >
-              <Text
-                style={{
-                  color: "#A09F9F",
-                  fontSize: 16,
-                  fontFamily: "HostGroteskBold",
-                  width: 100,
-                  textAlign: "right",
-                }}
-              >
-                See All
-              </Text>
-            </Pressable>
-          </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{
-              flexDirection: "row",
               marginTop: 15,
-              paddingLeft: 15,
+              paddingHorizontal: 15,
+              paddingBottom: 15,
+              gap: 10,
             }}
           >
             {[1, 2, 3, 4, 5].map((item, key) => (
-              <View
-                style={{
-                  width: 180,
-                  marginRight: 10,
-                }}
-                key={key}
-              >
-                <ProductCard index={key} />
-              </View>
+              <RequestCard key={key} index={item} />
             ))}
-          </ScrollView>
-
-          {/* Recommended for you */}
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginTop: 30,
-              paddingHorizontal: 15,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 18,
-                fontFamily: "HostGroteskBold",
-                width: 200,
-              }}
-            >
-              Recommended for you
-            </Text>
-            <Pressable
-              onPress={() => router.push("/account/marketplace/category/1")}
-            >
-              <Text
-                style={{
-                  color: "#A09F9F",
-                  fontSize: 16,
-                  fontFamily: "HostGroteskBold",
-                  width: 100,
-                  textAlign: "right",
-                }}
-              >
-                See All
-              </Text>
-            </Pressable>
           </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{
-              flexDirection: "row",
-              marginTop: 15,
-              paddingLeft: 15,
-            }}
-          >
-            {[1, 2, 3, 4, 5].map((item, key) => (
-              <View
-                style={{
-                  width: 180,
-                  marginRight: 10,
-                }}
-                key={key}
-              >
-                <ProductCard index={key} />
-              </View>
-            ))}
-          </ScrollView>
         </ScrollView>
       </SafeAreaView>
     </View>
+  );
+}
+
+function CustomSwitch() {
+  const [on, setOn] = useState(false);
+  const translateX = useRef(new Animated.Value(6)).current;
+
+  const toggle = () => {
+    Animated.timing(translateX, {
+      toValue: on ? 6 : 70,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+
+    setOn(!on);
+  };
+
+  return (
+    <Pressable
+      onPress={toggle}
+      style={{
+        width: 110,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: on ? "#CCD9F8" : "#EAEAEA",
+        position: "relative",
+        justifyContent: "center",
+      }}
+    >
+      {on ? (
+        <Text
+          style={{
+            fontSize: 16,
+            fontFamily: "HostGrotesk",
+            paddingLeft: 15,
+          }}
+        >
+          Online
+        </Text>
+      ) : (
+        <Text
+          style={{
+            fontSize: 16,
+            fontFamily: "HostGrotesk",
+            textAlign: "right",
+            paddingRight: 15,
+          }}
+        >
+          Offline
+        </Text>
+      )}
+
+      <Animated.View
+        style={{
+          width: 35,
+          height: 35,
+          borderRadius: 100,
+          backgroundColor: on ? "#100152" : "#A4A4A4",
+          position: "absolute",
+          top: "50%",
+          transform: [{ translateX }, { translateY: -17.5 }],
+        }}
+      />
+    </Pressable>
   );
 }
 

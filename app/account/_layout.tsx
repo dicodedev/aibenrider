@@ -72,7 +72,7 @@ const items = [
   {
     link: "/account/vehicles",
     icon: <SvgXml xml={delivery("#000000")} width={22} height={19} />,
-    text: "My Vehicles",
+    text: "Vehicles Services",
   },
   {
     link: "/account/promotions",
