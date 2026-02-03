@@ -13,8 +13,8 @@ export default function index() {
   const app = useSelector((state: any) => state.app);
   const data = app.user;
 
-  const [token, setToken] = useState(null);
-  const [onboarded, setOnboarded] = useState(null);
+  const [token, setToken] = useState(false);
+  const [onboarded, setOnboarded] = useState(false);
 
   const [step, setStep] = useState(1);
 
@@ -49,16 +49,16 @@ export default function index() {
     loadOnboardedStatus();
   }, []);
 
-  if (!token) {
+  if (token) {
     return <Redirect href="/account/dashboard" />;
   } else if (onboarded) {
     return <Redirect href="/login" />;
   } else {
-    return <First />;
+    return <First onboarded={onboarded} token={token} />;
   }
 }
 
-const First = () => {
+const First = ({ onboarded, token }) => {
   const sizeAmin = useRef(new Animated.Value(1)).current; // start off-screen
   const radiusAmin = useRef(new Animated.Value(0)).current; // start off-screen
   const slideAnim = useRef(new Animated.Value(300)).current; // start off-screen
@@ -117,7 +117,7 @@ const First = () => {
     }, 3000);
 
     setTimeout(() => {
-      router.replace("/onboard");
+      token == null && onboarded == null && router.replace("/onboard");
     }, 4000);
   }, []);
   return (

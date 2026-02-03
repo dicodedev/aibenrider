@@ -13,9 +13,9 @@ export const ServiceCard = ({
     <Pressable
       onPress={() =>
         setSelected((prev) =>
-          prev.includes(index)
-            ? prev.filter((i) => i !== index)
-            : [...prev, index]
+          prev.includes(title.toLowerCase())
+            ? prev.filter((i) => i !== title.toLowerCase())
+            : [...prev, title.toLowerCase()],
         )
       }
       style={{

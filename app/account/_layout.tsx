@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Pressable, Text, TouchableOpacity, View } from "react-native";
 
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 import { DrawerContentScrollView } from "@react-navigation/drawer";
 
@@ -11,10 +11,43 @@ import { Drawer } from "expo-router/drawer";
 import { Image } from "react-native";
 import Svg, { Circle, Path, SvgXml } from "react-native-svg";
 
+import { appService } from "@/api/appService";
+
+import { appSlice } from "@/store/appSlice";
+import NetInfo from "@react-native-community/netinfo";
+
 export default function AccountLayout() {
   const app = useSelector((state: any) => state.app);
+  const pathname = usePathname();
 
-  console.log("path", usePathname());
+  const [isOnline, setIsOnline] = useState(true);
+
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsOnline(
+        state.isConnected === true && state.isInternetReachable !== false,
+      );
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const getDetails = async () => {
+      const res = await appService.getUserDetails();
+
+      dispatch(appSlice.actions.setUser(res.data));
+    };
+    getDetails();
+
+    console.log("path", pathname);
+  }, [, pathname]);
+
+  useEffect(() => {
+    !isOnline && router.push("/account/no-internet");
+  }, [isOnline]);
   return (
     <View
       style={{

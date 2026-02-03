@@ -1,14 +1,20 @@
 import { Pressable, ScrollView, Text, View } from "react-native";
 
+import { appService } from "@/api/appService";
 import { GlowBG } from "@/components/account/glow-bg";
 import { ServiceCard } from "@/components/account/service-card";
+import { CustomModal } from "@/components/custom-modal";
+import ScalingDots from "@/components/scaling-dots";
 import { arrowLeft } from "@/icons";
+import { appSlice } from "@/store/appSlice";
 import { router, useNavigation } from "expo-router";
-import { useState } from "react";
+import { Skeleton } from "moti/skeleton";
+import { useEffect, useState } from "react";
 import { Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Svg, { Path, SvgXml } from "react-native-svg";
-import { useSelector } from "react-redux";
+import Svg, { Circle, Path, SvgXml } from "react-native-svg";
+import Toast from "react-native-toast-message";
+import { useDispatch, useSelector } from "react-redux";
 
 const options = ["My Vehicles", "Manage Services"];
 const sOptions = [
@@ -93,14 +99,47 @@ const sOptions = [
 
 export default function Vehicles() {
   const app = useSelector((state: any) => state.app);
+
+  const user = app.user;
+
   const [page, setPage] = useState(0);
-  const [selected, setSelected] = useState([]);
+  const [selected, setSelected] = useState(user.services);
+
+  const [vehicles, setVehicles] = useState(null);
+
+  const [activeVehicle, setActiveVehicle] = useState(null);
+
+  const [visible, setVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const navigation = useNavigation();
+
+  const fetchVehicles = async () => {
+    const res = await appService.getVehicles();
+
+    setActiveVehicle(res.data.find((i) => i.active == 1));
+    setVehicles(res.data);
+  };
+
+  useEffect(() => {
+    !visible && fetchVehicles();
+  }, [visible]);
+
+  useEffect(() => {
+    (async () => {
+      let payload = { services: selected };
+      await appService.setServices(payload);
+    })();
+  }, [selected]);
 
   return (
     <View style={{ flex: 1 }}>
       <GlowBG />
+      <CustomModal
+        setVisible={setVisible}
+        visible={visible}
+        content={<SuccessModal visible={visible} setVisible={setVisible} />}
+      />
       <SafeAreaView
         style={{
           flex: 1,
@@ -180,7 +219,11 @@ export default function Vehicles() {
             ))}
           </View>
           {!page ? (
-            <First />
+            <First
+              activeVehicle={activeVehicle}
+              vehicles={vehicles}
+              setVisble={setVisible}
+            />
           ) : (
             <Second selected={selected} setSelected={setSelected} />
           )}
@@ -190,199 +233,209 @@ export default function Vehicles() {
   );
 }
 
-const First = () => {
+const First = ({ activeVehicle, vehicles, setVisble }) => {
+  const dispatch = useDispatch();
   return (
     <>
-      <View
-        style={{
-          backgroundColor: "#FFFFFF",
-          borderRadius: 10,
-          padding: 20,
-        }}
-      >
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 14,
-              fontFamily: "HostGroteskBold",
-            }}
-          >
-            Mini Car
-          </Text>
-          <Pressable
-            onPress={() => router.push("/account/vehicles/edit-vehicle")}
-            style={{
-              flexDirection: "row",
-              gap: 10,
-            }}
-          >
-            <Svg width="18" height="17" viewBox="0 0 18 17" fill="none">
-              <Path
-                d="M10.9792 2.72995L13.7824 5.53318M9.11038 15.8117H16.5857M1.63509 12.0741L0.700684 15.8117L4.43833 14.8773L15.2644 4.0512C15.6148 3.70075 15.8116 3.22549 15.8116 2.72995C15.8116 2.2344 15.6148 1.75915 15.2644 1.40869L15.1037 1.24797C14.7532 0.897621 14.278 0.700806 13.7824 0.700806C13.2869 0.700806 12.8116 0.897621 12.4612 1.24797L1.63509 12.0741Z"
-                stroke="black"
-                stroke-width="1.40162"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </Svg>
-
-            <Text
-              style={{
-                fontSize: 14,
-                fontFamily: "HostGroteskBold",
-              }}
-            >
-              Edit
-            </Text>
-          </Pressable>
-        </View>
-        <View
-          style={{
-            alignItems: "center",
-            marginTop: 20,
-            justifyContent: "center",
-          }}
-        >
-          <Image
-            source={require("@/assets/images/account/yu 1.png")}
-            style={{
-              width: 250,
-              height: 100,
-            }}
-          />
-        </View>
-        <View
-          style={{
-            marginTop: 20,
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 17,
-              fontFamily: "HostGroteskBold",
-            }}
-          >
-            ABC-123XY
-          </Text>
-          <Text
-            style={{
-              fontSize: 16,
-              fontFamily: "HostGrotesk",
-              fontStyle: "italic",
-            }}
-          >
-            Toyota Corolla . 2019 . Grey
-          </Text>
+      {activeVehicle && (
+        <>
           <View
             style={{
-              backgroundColor: "#100152",
-              paddingVertical: 5,
-              paddingHorizontal: 15,
-              borderRadius: 100,
-              alignSelf: "flex-start",
-              marginTop: 10,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 14,
-                fontFamily: "HostGroteskBold",
-                color: "#FFFFFF",
-              }}
-            >
-              Active
-            </Text>
-          </View>
-        </View>
-      </View>
-      <Pressable
-        onPress={() => router.push("/account/vehicles/photos")}
-        style={{
-          flexDirection: "row",
-          paddingVertical: 20,
-          gap: 20,
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <Text
-          style={{
-            fontSize: 16,
-            fontFamily: "HostGroteskBold",
-            paddingLeft: 10,
-          }}
-        >
-          Photo Uploads
-        </Text>
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 20,
-          }}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              gap: 10,
-              alignItems: "center",
+              backgroundColor: "#FFFFFF",
+              borderRadius: 10,
+              padding: 20,
             }}
           >
             <View
               style={{
                 flexDirection: "row",
-                gap: 5,
+                justifyContent: "space-between",
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontFamily: "HostGroteskBold",
+                }}
+              >
+                {activeVehicle.category.name}
+              </Text>
+              <Pressable
+                onPress={() =>
+                  router.push(
+                    "/account/vehicles/edit-vehicle/" + activeVehicle.id,
+                  )
+                }
+                style={{
+                  flexDirection: "row",
+                  gap: 10,
+                }}
+              >
+                <Svg width="18" height="17" viewBox="0 0 18 17" fill="none">
+                  <Path
+                    d="M10.9792 2.72995L13.7824 5.53318M9.11038 15.8117H16.5857M1.63509 12.0741L0.700684 15.8117L4.43833 14.8773L15.2644 4.0512C15.6148 3.70075 15.8116 3.22549 15.8116 2.72995C15.8116 2.2344 15.6148 1.75915 15.2644 1.40869L15.1037 1.24797C14.7532 0.897621 14.278 0.700806 13.7824 0.700806C13.2869 0.700806 12.8116 0.897621 12.4612 1.24797L1.63509 12.0741Z"
+                    stroke="black"
+                    stroke-width="1.40162"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </Svg>
+
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontFamily: "HostGroteskBold",
+                  }}
+                >
+                  Edit
+                </Text>
+              </Pressable>
+            </View>
+            <View
+              style={{
+                alignItems: "center",
+                marginTop: 20,
+                justifyContent: "center",
               }}
             >
               <Image
-                source={require("@/assets/images/account/image 37.png")}
+                source={{ uri: activeVehicle.category.image }}
                 style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 5,
-                }}
-              />
-              <Image
-                source={require("@/assets/images/account/image 37.png")}
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 5,
-                }}
-              />
-              <Image
-                source={require("@/assets/images/account/image 37.png")}
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 5,
+                  width: 250,
+                  height: 100,
                 }}
               />
             </View>
-            <Text
+            <View
               style={{
-                fontSize: 12,
-                fontFamily: "HostGroteskBold",
-                color: "#6A6A6A",
+                marginTop: 20,
               }}
             >
-              +1More
-            </Text>
+              <Text
+                style={{
+                  fontSize: 17,
+                  fontFamily: "HostGroteskBold",
+                }}
+              >
+                {activeVehicle.plate_number}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontFamily: "HostGrotesk",
+                  fontStyle: "italic",
+                }}
+              >
+                {`${activeVehicle.brand} ${activeVehicle.model} . ${activeVehicle.year} . ${activeVehicle.color}`}
+              </Text>
+              <View
+                style={{
+                  backgroundColor: "#100152",
+                  paddingVertical: 5,
+                  paddingHorizontal: 15,
+                  borderRadius: 100,
+                  alignSelf: "flex-start",
+                  marginTop: 10,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontFamily: "HostGroteskBold",
+                    color: "#FFFFFF",
+                  }}
+                >
+                  Active
+                </Text>
+              </View>
+            </View>
           </View>
-          <Svg width="12" height="24" viewBox="0 0 12 24" fill="none">
-            <Path
-              d="M1.99984 6.98081L3.06084 5.92081L8.83984 11.6978C8.93299 11.7904 9.00692 11.9005 9.05737 12.0217C9.10782 12.143 9.13379 12.273 9.13379 12.4043C9.13379 12.5356 9.10782 12.6657 9.05737 12.7869C9.00692 12.9082 8.93299 13.0182 8.83984 13.1108L3.06084 18.8908L2.00084 17.8308L7.42484 12.4058L1.99984 6.98081Z"
-              fill="black"
-            />
-          </Svg>
-        </View>
-      </Pressable>
+          <Pressable
+            onPress={() => {
+              if (!activeVehicle.images.length) return;
+
+              dispatch(appSlice.actions.setImages(activeVehicle.images));
+
+              router.push({
+                pathname: "/account/vehicles/preview",
+                params: {
+                  currentIndex: 0,
+                },
+              });
+            }}
+            style={{
+              flexDirection: "row",
+              paddingVertical: 20,
+              gap: 20,
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 20,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 16,
+                fontFamily: "HostGroteskBold",
+                paddingLeft: 10,
+              }}
+            >
+              Vehicle Images
+            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 20,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  gap: 10,
+                  alignItems: "center",
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: "row",
+                    gap: 5,
+                  }}
+                >
+                  {activeVehicle.images.slice(0, 3).map((item, key) => (
+                    <Image
+                      key={key}
+                      source={{ uri: item.url }}
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 5,
+                      }}
+                    />
+                  ))}
+                </View>
+                {activeVehicle.images.length > 3 && (
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontFamily: "HostGroteskBold",
+                      color: "#6A6A6A",
+                    }}
+                  >
+                    +{activeVehicle.images.length - 3}More
+                  </Text>
+                )}
+              </View>
+              <Svg width="12" height="24" viewBox="0 0 12 24" fill="none">
+                <Path
+                  d="M1.99984 6.98081L3.06084 5.92081L8.83984 11.6978C8.93299 11.7904 9.00692 11.9005 9.05737 12.0217C9.10782 12.143 9.13379 12.273 9.13379 12.4043C9.13379 12.5356 9.10782 12.6657 9.05737 12.7869C9.00692 12.9082 8.93299 13.0182 8.83984 13.1108L3.06084 18.8908L2.00084 17.8308L7.42484 12.4058L1.99984 6.98081Z"
+                  fill="black"
+                />
+              </Svg>
+            </View>
+          </Pressable>
+        </>
+      )}
       <View
         style={{
           paddingHorizontal: 10,
@@ -394,7 +447,7 @@ const First = () => {
             backgroundColor: "#100152",
             paddingVertical: 20,
             borderRadius: 12,
-            marginTop: 30,
+            marginTop: 10,
             gap: 20,
             flexDirection: "row",
             justifyContent: "center",
@@ -450,71 +503,65 @@ const First = () => {
           gap: 20,
         }}
       >
-        {[1, 2, 3, 4, 5].map((item, key) => (
-          <View
-            key={key}
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-            }}
-          >
-            <View
-              style={{
-                flexDirection: "row",
-                gap: 20,
-              }}
-            >
-              <Image
-                source={require("@/assets/images/account/image 37.png")}
-                style={{
-                  width: 46,
-                  height: 46,
-                  borderRadius: 100,
-                }}
-              />
-              <View>
-                <Text
+        {vehicles
+          ? vehicles.map((item, key) => (
+              <Card item={item} key={key} setVisible={setVisble} />
+            ))
+          : Array(3)
+              .fill(1)
+              .map((item, key) => (
+                <View
+                  key={key}
                   style={{
-                    fontSize: 17,
-                    fontFamily: "HostGroteskBold",
-                    marginBottom: 5,
+                    flexDirection: "row",
+                    justifyContent: "space-between",
                   }}
                 >
-                  Toyota Highlander
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontFamily: "HostGroteskBold",
-
-                    color: "#6A6A6A",
-                  }}
-                >
-                  XYZ - 567AB
-                </Text>
-              </View>
-            </View>
-            <Pressable
-              style={{
-                backgroundColor: "#100152",
-                paddingVertical: 10,
-                paddingHorizontal: 15,
-                borderRadius: 8,
-                alignSelf: "flex-start",
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 12,
-                  fontFamily: "HostGroteskBold",
-                  color: "#F5F5F5",
-                }}
-              >
-                Activate
-              </Text>
-            </Pressable>
-          </View>
-        ))}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      gap: 20,
+                    }}
+                  >
+                    <Skeleton
+                      colorMode="light"
+                      height={46}
+                      width={46}
+                      radius={100}
+                    />
+                    <View
+                      style={{
+                        paddingTop: 10,
+                      }}
+                    >
+                      <Skeleton
+                        colorMode="light"
+                        height={12}
+                        width={150}
+                        radius={10}
+                      />
+                      <View
+                        style={{
+                          marginTop: 10,
+                        }}
+                      >
+                        <Skeleton
+                          colorMode="light"
+                          height={10}
+                          width={100}
+                          radius={10}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                  <Skeleton
+                    colorMode="light"
+                    height={40}
+                    width={80}
+                    radius={8}
+                  />
+                </View>
+              ))}
       </View>
     </>
   );
@@ -546,7 +593,7 @@ const Second = ({ selected, setSelected }) => {
             icon={item.icon}
             title={item.title}
             text={item.text}
-            active={selected.includes(key)}
+            active={selected.includes(item.title.toLowerCase())}
             setSelected={setSelected}
             index={key}
           />
@@ -607,6 +654,154 @@ const Second = ({ selected, setSelected }) => {
           </Text>
         </Text>
       </View>
+    </View>
+  );
+};
+
+const Card = ({ item, setVisible }) => {
+  const [loading, setLoading] = useState(false);
+
+  const activate = async () => {
+    try {
+      setLoading(true);
+
+      await appService.activateVehicle(item.id);
+
+      setVisible("Vehicle Activated");
+    } catch (error: any) {
+      console.log("error", error);
+
+      Toast.show({
+        type: "error",
+        text1: "Activation Failed",
+        text2:
+          (error.errors !== undefined && error.errors[0]
+            ? error.errors[0]
+            : error.message) || "Something went wrong",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        justifyContent: "space-between",
+      }}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          gap: 20,
+        }}
+      >
+        <Image
+          source={{ uri: item.images[0]?.url }}
+          style={{
+            width: 46,
+            height: 46,
+            borderRadius: 100,
+          }}
+        />
+        <View>
+          <Text
+            style={{
+              fontSize: 17,
+              fontFamily: "HostGroteskBold",
+              marginBottom: 5,
+            }}
+          >
+            {`${item.brand} ${item.model}`}
+          </Text>
+          <Text
+            style={{
+              fontSize: 13,
+              fontFamily: "HostGroteskBold",
+
+              color: "#6A6A6A",
+            }}
+          >
+            {item.plate_number}
+          </Text>
+        </View>
+      </View>
+      <Pressable
+        style={{
+          backgroundColor: "#100152",
+          paddingVertical: 10,
+          paddingHorizontal: 15,
+          borderRadius: 8,
+          alignSelf: "flex-start",
+        }}
+        onPress={activate}
+      >
+        {loading ? (
+          <ScalingDots
+            dotCount={3}
+            dotSize={6}
+            dotColor="#ffffff"
+            speed={300}
+            style={{
+              marginVertical: 5,
+            }}
+            scaleRange={[1, 1.5]}
+          />
+        ) : (
+          <Text
+            style={{
+              fontSize: 12,
+              fontFamily: "HostGroteskBold",
+              color: "#F5F5F5",
+            }}
+          >
+            Activate
+          </Text>
+        )}
+      </Pressable>
+    </View>
+  );
+};
+
+const SuccessModal = ({ setVisible, visible }) => {
+  useEffect(() => {
+    setTimeout(() => {
+      setVisible(false);
+    }, 1000);
+  }, []);
+  return (
+    <View
+      style={{
+        backgroundColor: "#fff",
+        width: "70%",
+        borderRadius: 30,
+        padding: 30,
+        gap: 30,
+        alignItems: "center",
+      }}
+    >
+      <Svg width="103" height="103" viewBox="0 0 103 103" fill="none">
+        <Circle cx="51.5" cy="51.5" r="51.5" fill="#E6F5E0" />
+        <Path
+          d="M31.3679 48.1029L41.6165 65.4476L76.0661 41.7638"
+          stroke="#229D27"
+          stroke-width="5.42609"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </Svg>
+
+      <Text
+        style={{
+          color: "#000000",
+          fontFamily: "HostGroteskBold",
+          fontSize: 24,
+          marginBottom: 3,
+          textAlign: "center",
+        }}
+      >
+        {visible}
+      </Text>
     </View>
   );
 };

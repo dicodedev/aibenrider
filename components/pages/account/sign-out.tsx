@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from "react-native";
 
 import { arrowLeft } from "@/icons";
+import { deleteToken } from "@/utils/secureStore";
 import { router } from "expo-router";
 import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -85,7 +86,10 @@ export default function SignOutComponent() {
             </Text>
             <View style={{ gap: 15 }}>
               <Pressable
-                onPress={() => {}}
+                onPress={() => {
+                  deleteToken();
+                  router.replace("/login");
+                }}
                 style={{
                   width: "100%",
                   backgroundColor: "#100152",
@@ -131,7 +135,7 @@ export default function SignOutComponent() {
                 alignItems: "center",
                 marginTop: 30,
               }}
-              onPress={() => router.push("/login")}
+              onPress={() => router.replace("/login")}
             >
               <Text
                 style={{

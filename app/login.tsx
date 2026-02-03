@@ -1,13 +1,5 @@
-import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import React, { useState } from "react";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { FontAwesome } from "@expo/vector-icons";
@@ -24,6 +16,7 @@ import { InputError } from "@/components/input-error";
 import { logo } from "@/icons";
 import { appSlice } from "@/store/appSlice";
 import { yupResolver } from "@hookform/resolvers/yup";
+import { router } from "expo-router";
 import { Controller, useForm } from "react-hook-form";
 import * as yup from "yup";
 
@@ -52,17 +45,24 @@ export default function login() {
     resolver: yupResolver(schema),
   });
 
-
   const onSubmit = async (data: any) => {
     try {
       setLoading(true);
       const res = await authService.login(data);
 
       const user = res.data.user;
+      const role = user.roles[0].name;
 
-      dispatch(appSlice.actions.setUser(user));
-
-      router.replace("/account/dashboard");
+      if (role === "rider") {
+        dispatch(appSlice.actions.setUser(user));
+        router.replace("/account/dashboard");
+      } else {
+        Toast.show({
+          type: "error",
+          text1: "Unauthorized",
+          text2: "Kindly login with a valid rider account",
+        });
+      }
     } catch (error: any) {
       Toast.show({
         type: "error",
@@ -233,7 +233,7 @@ export default function login() {
               </Text>
             </Pressable>
           </View>
-          <TouchableOpacity
+          <Pressable
             style={{
               backgroundColor: "#100152",
               padding: 20,
@@ -245,8 +245,7 @@ export default function login() {
               alignItems: "center",
               opacity: loading ? 0.6 : 1,
             }}
-            onPress={() => router.push("/account/dashboard")}
-            // onPress={!loading ? handleSubmit(onSubmit) : () => {}}
+            onPress={!loading ? handleSubmit(onSubmit) : () => {}}
           >
             {loading ? (
               <ScalingDots
@@ -270,7 +269,7 @@ export default function login() {
                 LOGIN ACCOUNT
               </Text>
             )}
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
     </SafeAreaView>
