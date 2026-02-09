@@ -33,6 +33,7 @@ import { Skeleton } from "moti/skeleton";
 const schema = yup.object().shape({
   brand: yup.string().trim().required("Brand is required"),
   model: yup.string().trim().required("Model is required"),
+  price: yup.number().required("Price is required"),
   color: yup.string().trim().required("Color is required"),
   plate_number: yup.string().trim().required("Plate number is required"),
   year: yup.string().trim().required("Year is required"),
@@ -73,8 +74,6 @@ export default function AddVehicle() {
       // console.log("images", images);
     }
   };
-
-  
 
   const {
     control,
@@ -478,6 +477,31 @@ export default function AddVehicle() {
                     />
                     {errors.year && (
                       <InputError message={errors.year.message} />
+                    )}
+                  </View>
+                  <View style={styles.container}>
+                    <Controller
+                      control={control}
+                      name="price"
+                      render={({ field: { onChange, onBlur, value } }) => (
+                        <TextInput
+                          style={[
+                            styles.input,
+                            errors.price && styles.errorInput,
+                          ]}
+                          placeholderTextColor={"#A09F9F"}
+                          selectionColor={"#808080"}
+                          placeholder="Price"
+                          keyboardType="decimal-pad"
+                          autoCorrect={false}
+                          value={value}
+                          onChangeText={onChange}
+                          onBlur={onBlur}
+                        />
+                      )}
+                    />
+                    {errors.price && (
+                      <InputError message={errors.price.message} />
                     )}
                   </View>
                   <View style={styles.container}>

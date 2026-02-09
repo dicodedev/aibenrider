@@ -33,7 +33,7 @@ export const Upload = ({ item, setImages, index, setTargetItem }) => {
           );
           let data = res.data;
 
-          // console.log("image " + (Number(index) + 1), data);
+          console.log("image " + (Number(index) + 1), data);
 
           setImages((prev) =>
             prev.map((p, key) => (key === index ? { ...data } : p)),

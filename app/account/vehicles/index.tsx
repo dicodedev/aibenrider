@@ -12,7 +12,7 @@ import { Skeleton } from "moti/skeleton";
 import { useEffect, useState } from "react";
 import { Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Svg, { Circle, Path, SvgXml } from "react-native-svg";
+import Svg, { Circle, G, Path, SvgXml } from "react-native-svg";
 import Toast from "react-native-toast-message";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -237,7 +237,7 @@ const First = ({ activeVehicle, vehicles, setVisble }) => {
   const dispatch = useDispatch();
   return (
     <>
-      {activeVehicle && (
+      {activeVehicle ? (
         <>
           <View
             style={{
@@ -435,6 +435,130 @@ const First = ({ activeVehicle, vehicles, setVisble }) => {
             </View>
           </Pressable>
         </>
+      ) : (
+        <View>
+          <View
+            style={{
+              alignItems: "center",
+              marginTop: 10,
+            }}
+          >
+            <Svg width="72" height="72" viewBox="0 0 72 72" fill="none">
+              <G opacity="0.6">
+                <Path
+                  d="M14.2031 14.3438H0V15.75H14.2031V14.3438Z"
+                  fill="#C4C1AB"
+                />
+                <Path
+                  d="M14.2031 19.2656H2.8125V20.6719H14.2031V19.2656Z"
+                  fill="#C4C1AB"
+                />
+                <Path
+                  d="M14.2031 24.1875H6.60938V25.5938H14.2031V24.1875Z"
+                  fill="#C4C1AB"
+                />
+                <Path
+                  d="M51.8484 11.25H10.5469V47.3062H51.8484V11.25Z"
+                  fill="#C4C1AB"
+                />
+                <Path
+                  d="M51.8484 47.2922H10.5469V54H51.8484V47.2922Z"
+                  fill="#9E9E9E"
+                />
+                <Path
+                  d="M31.317 51.4828L28.3779 48.9656H21.3326L18.3936 51.4828V54H31.317V51.4828Z"
+                  fill="#888888"
+                />
+                <Path
+                  d="M51.8486 27H65.4611L71.2971 40.5V54H51.8486V27Z"
+                  fill="#9E9E9E"
+                />
+                <Path
+                  d="M66.0514 51.4828L63.1123 48.9656H56.067L53.1279 51.4828V54H66.0514V51.4828Z"
+                  fill="#888888"
+                />
+                <Path
+                  d="M53.1283 27H51.8486V47.2922H53.1283V27Z"
+                  fill="#888888"
+                />
+                <Path
+                  d="M54.8857 30.2203H63.5623L67.2889 38.8406V40.9359H61.917L60.0889 37.7859H54.8857V30.2203Z"
+                  fill="#C4C1AB"
+                />
+                <Path
+                  d="M55.8281 31.0781H63.9562L63.5625 30.2344H54.8438V37.8281H55.8281V31.0781Z"
+                  fill="#747E6C"
+                />
+                <Path
+                  d="M58.2188 39.7969H54.8438V41.2031H58.2188V39.7969Z"
+                  fill="#787878"
+                />
+                <Path
+                  d="M71.2969 45H68.2031V49.5984H71.2969V45Z"
+                  fill="#747E6C"
+                />
+                <Path
+                  d="M71.2969 45.8578H69.1172V49.5844H71.2969V45.8578Z"
+                  fill="#C4C1AB"
+                />
+                <Path
+                  d="M24.8488 60.7641C27.7457 60.7641 30.0941 58.4157 30.0941 55.5187C30.0941 52.6218 27.7457 50.2734 24.8488 50.2734C21.9519 50.2734 19.6035 52.6218 19.6035 55.5187C19.6035 58.4157 21.9519 60.7641 24.8488 60.7641Z"
+                  fill="#787878"
+                />
+                <Path
+                  d="M27.3938 53.339C27.1688 55.8281 25.1578 57.839 22.6688 58.064C22.6547 58.064 22.6266 58.064 22.6125 58.064C21.6 58.1484 21.2766 59.4703 22.1485 60.0047C23.0203 60.525 24.061 60.8062 25.1719 60.75C27.8016 60.5953 29.9391 58.4578 30.0938 55.8281C30.1641 54.7172 29.8828 53.6765 29.3485 52.8047C28.8141 51.9328 27.4922 52.2422 27.4078 53.2687C27.4078 53.2969 27.4078 53.3109 27.3938 53.339Z"
+                  fill="#828282"
+                />
+                <Path
+                  d="M59.5832 60.7641C62.4801 60.7641 64.8285 58.4157 64.8285 55.5187C64.8285 52.6218 62.4801 50.2734 59.5832 50.2734C56.6863 50.2734 54.3379 52.6218 54.3379 55.5187C54.3379 58.4157 56.6863 60.7641 59.5832 60.7641Z"
+                  fill="#787878"
+                />
+                <Path
+                  d="M62.1282 53.339C61.9032 55.8281 59.8922 57.839 57.4032 58.064C57.3891 58.064 57.361 58.064 57.3469 58.064C56.3344 58.1484 56.011 59.4703 56.8828 60.0047C57.7547 60.525 58.7953 60.8062 59.9063 60.75C62.536 60.5953 64.6735 58.4578 64.8282 55.8281C64.8985 54.7172 64.6172 53.6765 64.0828 52.8047C63.5485 51.9328 62.2266 52.2422 62.1422 53.2687C62.1422 53.2969 62.1422 53.3109 62.1282 53.339Z"
+                  fill="#828282"
+                />
+                <Path
+                  d="M59.5824 57.5016C60.6775 57.5016 61.5652 56.6138 61.5652 55.5188C61.5652 54.4237 60.6775 53.5359 59.5824 53.5359C58.4873 53.5359 57.5996 54.4237 57.5996 55.5188C57.5996 56.6138 58.4873 57.5016 59.5824 57.5016Z"
+                  fill="#828282"
+                />
+                <Path
+                  d="M24.848 57.5016C25.9431 57.5016 26.8309 56.6138 26.8309 55.5188C26.8309 54.4237 25.9431 53.5359 24.848 53.5359C23.753 53.5359 22.8652 54.4237 22.8652 55.5188C22.8652 56.6138 23.753 57.5016 24.848 57.5016Z"
+                  fill="#828282"
+                />
+                <Path
+                  d="M48.1504 15.0609H14.2598V43.4813H48.1504V15.0609Z"
+                  fill="#747E6C"
+                />
+                <Path
+                  d="M48.1359 17.2266H16.1719V43.4813H48.1359V17.2266Z"
+                  fill="#EBEADF"
+                />
+              </G>
+            </Svg>
+          </View>
+          <Text
+            style={{
+              fontFamily: "HostGrotesk",
+              color: "#9F9F9F",
+              textAlign: "center",
+              lineHeight: 20,
+              marginBottom: 0,
+            }}
+          >
+            You have no active vehicles,
+          </Text>
+          <Text
+            style={{
+              fontFamily: "HostGrotesk",
+              color: "#9F9F9F",
+              textAlign: "center",
+              lineHeight: 20,
+              marginBottom: 20,
+            }}
+          >
+            activate a vehicle to bring it online
+          </Text>
+        </View>
       )}
       <View
         style={{
@@ -714,27 +838,56 @@ const Card = ({ item, setVisible }) => {
           >
             {`${item.brand} ${item.model}`}
           </Text>
-          <Text
+          <View
             style={{
-              fontSize: 13,
-              fontFamily: "HostGroteskBold",
-
-              color: "#6A6A6A",
+              flexDirection: "row",
+              gap: 20,
+              alignItems: "center",
             }}
           >
-            {item.plate_number}
-          </Text>
+            <Text
+              style={{
+                fontSize: 13,
+                fontFamily: "HostGroteskBold",
+
+                color: "#6A6A6A",
+              }}
+            >
+              {item.plate_number}
+            </Text>
+            {item.status == "in-review" ? (
+              <View
+                style={{
+                  backgroundColor: "#FBAF41",
+                  padding: 3,
+                  borderRadius: 10,
+                  paddingHorizontal: 12,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 9,
+                    fontFamily: "HostGroteskBold",
+                  }}
+                >
+                  Pending
+                </Text>
+              </View>
+            ) : (
+              <></>
+            )}
+          </View>
         </View>
       </View>
       <Pressable
         style={{
-          backgroundColor: "#100152",
+          backgroundColor: item.status == "in-review" ? "#878787" : "#100152",
           paddingVertical: 10,
           paddingHorizontal: 15,
           borderRadius: 8,
           alignSelf: "flex-start",
         }}
-        onPress={activate}
+        onPress={item.status != "in-review" ? () => activate() : () => {}}
       >
         {loading ? (
           <ScalingDots

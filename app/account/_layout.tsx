@@ -11,6 +11,8 @@ import { Drawer } from "expo-router/drawer";
 import { Image } from "react-native";
 import Svg, { Circle, Path, SvgXml } from "react-native-svg";
 
+import ProfilePicture from "@/assets/images/account/profile-picture.png";
+
 import { appService } from "@/api/appService";
 
 import { appSlice } from "@/store/appSlice";
@@ -160,6 +162,9 @@ const items = [
 function CustomDrawer(props: any) {
   const { state } = props;
 
+  const app = useSelector((state: any) => state.app);
+  const data = app.user;
+
   // Active route index
   const activeIndex = state.index;
 
@@ -205,7 +210,13 @@ function CustomDrawer(props: any) {
             }}
           >
             <Image
-              source={{ uri: "https://avatar.iran.liara.run/public" }}
+              source={
+                data
+                  ? data?.picture && data?.picture != "null"
+                    ? { uri: data?.picture }
+                    : ProfilePicture
+                  : ProfilePicture
+              }
               style={{
                 width: "100%",
                 height: "100%",
@@ -222,7 +233,7 @@ function CustomDrawer(props: any) {
                 width: "100%",
               }}
             >
-              John Doe
+              {data?.name}
             </Text>
             <Text
               style={{

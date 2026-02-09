@@ -1,6 +1,7 @@
 import { Tabs } from "expo-router";
 import React from "react";
 import { Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import Svg, { Path } from "react-native-svg";
 import { useSelector } from "react-redux";
@@ -11,10 +12,12 @@ export default function TabLayout() {
   // console.log("go back", router.canGoBack());
 
   return (
-    <View
+    <SafeAreaView
       style={{
         flex: 1,
+        backgroundColor: "#000",
       }}
+      edges={["bottom"]}
     >
       <Tabs
         screenOptions={{
@@ -168,7 +171,7 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
-    </View>
+    </SafeAreaView>
   );
 }
 

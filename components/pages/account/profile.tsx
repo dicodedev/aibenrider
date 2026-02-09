@@ -16,8 +16,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path, SvgXml } from "react-native-svg";
 import { useSelector } from "react-redux";
 
+import ProfilePicture from "@/assets/images/account/profile-picture.png";
+
 export default function ProfileComponent() {
   const app = useSelector((state: any) => state.app);
+  const data = app.user;
+
+  // console.log("data", data);
+
   const [search, setSearch] = useState("");
 
   return (
@@ -103,7 +109,11 @@ export default function ProfileComponent() {
               }}
             >
               <Image
-                source={{ uri: "https://avatar.iran.liara.run/public" }}
+                source={
+                  data.picture && data.picture != "null"
+                    ? { uri: data.picture }
+                    : ProfilePicture
+                }
                 style={{
                   width: "100%",
                   height: "100%",
@@ -123,7 +133,7 @@ export default function ProfileComponent() {
                   textAlign: "center",
                 }}
               >
-                Sarah Davies
+                {data.name}
               </Text>
               <Text
                 style={{
@@ -133,7 +143,7 @@ export default function ProfileComponent() {
                   textAlign: "center",
                 }}
               >
-                sarah.davies@example.com
+                {data.email}
               </Text>
             </View>
           </View>
@@ -153,9 +163,9 @@ export default function ProfileComponent() {
                 keyboardType="ascii-capable"
                 autoCapitalize="none"
                 autoCorrect={false}
-                readOnly={false}
+                readOnly={true}
                 textContentType="name"
-                value={""}
+                value={data.name}
               />
             </View>
             <View style={styles.container}>
@@ -168,9 +178,9 @@ export default function ProfileComponent() {
                 keyboardType="ascii-capable"
                 autoCapitalize="none"
                 autoCorrect={false}
-                readOnly={false}
+                readOnly={true}
                 textContentType="name"
-                value={""}
+                value={data.email}
               />
             </View>
             <View style={styles.container}>
@@ -183,26 +193,12 @@ export default function ProfileComponent() {
                 keyboardType="ascii-capable"
                 autoCapitalize="none"
                 autoCorrect={false}
-                readOnly={false}
+                readOnly={true}
                 textContentType="name"
-                value={""}
+                value={data.phone_number}
               />
             </View>
-            <View style={styles.container}>
-              <Text style={styles.label}>Date Of Birth</Text>
-              <TextInput
-                style={styles.input}
-                placeholderTextColor={"#A09F9F"}
-                selectionColor={"#808080"}
-                placeholder="Date Of Birth"
-                keyboardType="ascii-capable"
-                autoCapitalize="none"
-                autoCorrect={false}
-                readOnly={false}
-                textContentType="name"
-                value={""}
-              />
-            </View>
+
             <View style={styles.container}>
               <Text style={styles.label}>Gender</Text>
               <TextInput
@@ -213,9 +209,54 @@ export default function ProfileComponent() {
                 keyboardType="ascii-capable"
                 autoCapitalize="none"
                 autoCorrect={false}
-                readOnly={false}
+                readOnly={true}
                 textContentType="name"
-                value={""}
+                value={data.gender}
+              />
+            </View>
+            <View style={styles.container}>
+              <Text style={styles.label}>Country</Text>
+              <TextInput
+                style={styles.input}
+                placeholderTextColor={"#A09F9F"}
+                selectionColor={"#808080"}
+                placeholder="Country"
+                keyboardType="ascii-capable"
+                autoCapitalize="none"
+                autoCorrect={false}
+                readOnly={true}
+                textContentType="name"
+                value={data.country?.name}
+              />
+            </View>
+            <View style={styles.container}>
+              <Text style={styles.label}>State</Text>
+              <TextInput
+                style={styles.input}
+                placeholderTextColor={"#A09F9F"}
+                selectionColor={"#808080"}
+                placeholder="State"
+                keyboardType="ascii-capable"
+                autoCapitalize="none"
+                autoCorrect={false}
+                readOnly={true}
+                textContentType="name"
+                value={data.state_data?.name}
+              />
+            </View>
+            <View style={styles.container}>
+              <Text style={styles.label}>City</Text>
+              <TextInput
+                style={styles.input}
+                placeholderTextColor={"#A09F9F"}
+                selectionColor={"#808080"}
+                placeholder="City"
+                keyboardType="ascii-capable"
+                autoCapitalize="none"
+                autoCorrect={false}
+                readOnly={true}
+                textContentType="name"
+                value={data.city_data?.name}
               />
             </View>
           </View>
