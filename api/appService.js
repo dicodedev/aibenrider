@@ -13,6 +13,10 @@ export const appService = {
     const res = await api.get(`/vehicle_category/` + id);
     return res.data;
   },
+  getVehicle: async (id) => {
+    const res = await api.get(`/vehicle/` + id);
+    return res.data;
+  },
   activateVehicle: async (id) => {
     const res = await api.get(`/vehicle/${id}/activate`);
     return res.data;
@@ -27,6 +31,10 @@ export const appService = {
   },
   addVehicle: async (payload) => {
     const res = await api.post("vehicle/create", payload);
+    return res.data;
+  },
+  editVehicle: async (id, payload) => {
+    const res = await api.put("vehicle/" + id, payload);
     return res.data;
   },
   uploadVehicleImage: async (payload, setProgress) => {

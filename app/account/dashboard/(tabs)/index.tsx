@@ -3,7 +3,6 @@ import {
   Image,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -16,11 +15,13 @@ import { useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 
-const colors = ["#FFE4C3", "#E0FAD5", "#FFD0DA", "#D4E0FF"];
+import ProfilePicture from "@/assets/images/account/profile-picture.png";
 
 export default function HomeScreen() {
   const app = useSelector((state: any) => state.app);
   const [search, setSearch] = useState("");
+
+  const data = app.user;
 
   return (
     <View style={{ flex: 1 }}>
@@ -63,7 +64,13 @@ export default function HomeScreen() {
                 }}
               >
                 <Image
-                  source={{ uri: "https://avatar.iran.liara.run/public" }}
+                  source={
+                    data
+                      ? data?.picture && data?.picture != "null"
+                        ? { uri: data?.picture }
+                        : ProfilePicture
+                      : ProfilePicture
+                  }
                   style={{
                     width: "100%",
                     height: "100%",

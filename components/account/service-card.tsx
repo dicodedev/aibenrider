@@ -3,27 +3,32 @@ import { Pressable, Text, View } from "react-native";
 export const ServiceCard = ({
   index,
   color,
+  borderColor,
   icon,
   title,
   text,
   active,
   setSelected,
+  editable = true,
 }) => {
   return (
     <Pressable
-      onPress={() =>
-        setSelected((prev) =>
-          prev.includes(title.toLowerCase())
-            ? prev.filter((i) => i !== title.toLowerCase())
-            : [...prev, title.toLowerCase()],
-        )
+      onPress={
+        editable
+          ? () =>
+              setSelected((prev) =>
+                prev.includes(title.toLowerCase())
+                  ? prev.filter((i) => i !== title.toLowerCase())
+                  : [...prev, title.toLowerCase()],
+              )
+          : () => {}
       }
       style={{
         justifyContent: "space-between",
         alignItems: "center",
         backgroundColor: "#FFFFFF",
         borderWidth: 1,
-        borderColor: active ? "#100152" : "#ffffff",
+        borderColor: active ? borderColor : "#ffffff",
         flexDirection: "row",
         padding: 20,
         borderRadius: 12,
@@ -81,7 +86,7 @@ export const ServiceCard = ({
           backgroundColor: "#F5F5F5",
           borderWidth: 4,
           borderRadius: "100%",
-          borderColor: active ? "#FBAF41" : "#D9D9D9",
+          borderColor: active ? borderColor : "#D9D9D9",
           width: 16,
           height: 16,
         }}

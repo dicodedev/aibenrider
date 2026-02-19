@@ -13,8 +13,8 @@ export default function index() {
   const app = useSelector((state: any) => state.app);
   const data = app.user;
 
-  const [token, setToken] = useState(false);
-  const [onboarded, setOnboarded] = useState(false);
+  const [token, setToken] = useState(null);
+  const [onboarded, setOnboarded] = useState(null);
 
   const [step, setStep] = useState(1);
 
@@ -53,7 +53,7 @@ export default function index() {
     return <Redirect href="/account/dashboard" />;
   } else if (onboarded) {
     return <Redirect href="/login" />;
-  } else {
+  } else if (onboarded == false && token == false) {
     return <First onboarded={onboarded} token={token} />;
   }
 }
@@ -117,7 +117,8 @@ const First = ({ onboarded, token }) => {
     }, 3000);
 
     setTimeout(() => {
-      token == null && onboarded == null && router.replace("/onboard");
+      console.log("d", token, onboarded);
+      router.replace("/onboard");
     }, 4000);
   }, []);
   return (

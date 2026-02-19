@@ -29,11 +29,11 @@ import { DropdownComponent } from "@/components/custom-dropdown";
 import { CustomModal } from "@/components/custom-modal";
 import { appSlice } from "@/store/appSlice";
 import { Skeleton } from "moti/skeleton";
+import Toast from "react-native-toast-message";
 
 const schema = yup.object().shape({
   brand: yup.string().trim().required("Brand is required"),
   model: yup.string().trim().required("Model is required"),
-  price: yup.number().required("Price is required"),
   color: yup.string().trim().required("Color is required"),
   plate_number: yup.string().trim().required("Plate number is required"),
   year: yup.string().trim().required("Year is required"),
@@ -53,8 +53,11 @@ const years = Array.from({ length: currentYear - 2000 + 1 }, (_, i) => {
 export default function AddVehicle() {
   const app = useSelector((state: any) => state.app);
   const [vehicle, setVehicle] = useState(null);
+  const [image, setImage] = useState(null);
   const [images, setImages] = useState([]);
   const [categories, setCategories] = useState(null);
+
+  const [progress, setProgress] = useState(0);
 
   const [success, setSuccess] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -65,11 +68,11 @@ export default function AddVehicle() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       aspect: [1, 1], // forces 1:1 profile photo shape
       quality: 1,
-      allowsMultipleSelection: true,
+      allowsMultipleSelection: false,
     });
 
     if (!result.canceled) {
-      setImages([...images, ...result.assets]);
+      setImage(result.assets[0]);
 
       // console.log("images", images);
     }
@@ -94,7 +97,12 @@ export default function AddVehicle() {
       }),
     );
 
-    router.push("/account/vehicles/select-service");
+    router.push({
+      pathname: "/account/vehicles/select-service",
+      params: {
+        type: "add",
+      },
+    });
   };
 
   const fetchCategories = async () => {
@@ -110,6 +118,45 @@ export default function AddVehicle() {
   useEffect(() => {
     setVisible(targetItem ? true : false);
   }, [targetItem]);
+
+  useEffect(() => {
+    if (image) {
+      (async () => {
+        try {
+          const formData = new FormData();
+
+          formData.append("file", {
+            uri: image.uri,
+            name: image.fileName || "photo.jpg",
+            type: image.mimeType || "image/jpeg",
+          });
+
+          const res = await appService.uploadVehicleImage(
+            formData,
+            setProgress,
+          );
+          let data = res.data;
+
+          setImages((prev) => [data, ...prev]);
+          setImage(null);
+        } catch (error: any) {
+          // console.log("error", error);
+
+          setProgress(0);
+          setImage(null);
+
+          Toast.show({
+            type: "error",
+            text1: "Failed",
+            text2:
+              (error.errors !== undefined && error.errors[0]
+                ? error.errors[0]
+                : error.message) || "Something went wrong",
+          });
+        }
+      })();
+    }
+  }, [image]);
 
   useEffect(() => {
     fetchCategories();
@@ -208,7 +255,7 @@ export default function AddVehicle() {
                 fontSize: 24,
               }}
             >
-              Manage Vehicle
+              Add Vehicle
             </Text>
             <Pressable
               style={{
@@ -234,7 +281,7 @@ export default function AddVehicle() {
                 gap: 10,
               }}
             >
-              {[1, 2, 3].map((item, key) => (
+              {[1, 2].map((item, key) => (
                 <View
                   key={key}
                   style={{
@@ -479,31 +526,7 @@ export default function AddVehicle() {
                       <InputError message={errors.year.message} />
                     )}
                   </View>
-                  <View style={styles.container}>
-                    <Controller
-                      control={control}
-                      name="price"
-                      render={({ field: { onChange, onBlur, value } }) => (
-                        <TextInput
-                          style={[
-                            styles.input,
-                            errors.price && styles.errorInput,
-                          ]}
-                          placeholderTextColor={"#A09F9F"}
-                          selectionColor={"#808080"}
-                          placeholder="Price"
-                          keyboardType="decimal-pad"
-                          autoCorrect={false}
-                          value={value}
-                          onChangeText={onChange}
-                          onBlur={onBlur}
-                        />
-                      )}
-                    />
-                    {errors.price && (
-                      <InputError message={errors.price.message} />
-                    )}
-                  </View>
+
                   <View style={styles.container}>
                     <Controller
                       control={control}
@@ -584,16 +607,44 @@ export default function AddVehicle() {
                           borderWidth: 2,
                           borderColor: "#E7E7E6",
                           justifyContent: "center",
+
+                          position: "relative",
+                          alignItems: "center",
+                          overflow: "hidden",
+                          zIndex: 10,
                         }}
                       >
-                        <Text
-                          style={{
-                            textAlign: "center",
-                            fontFamily: "HostGrotesk",
-                          }}
-                        >
-                          Upload Photo
-                        </Text>
+                        {image ? (
+                          <>
+                            <View
+                              style={{
+                                width: (progress > 100 ? 100 : progress) + "%",
+                                backgroundColor: "#fafafa",
+                                position: "absolute",
+                                left: 0,
+                                height: "100%",
+                              }}
+                            ></View>
+                            <Text
+                              style={{
+                                fontFamily: "HostGrotesk",
+                                fontSize: 12,
+                                textAlign: "center",
+                              }}
+                            >
+                              {progress > 100 ? 100 : progress}%
+                            </Text>
+                          </>
+                        ) : (
+                          <Text
+                            style={{
+                              textAlign: "center",
+                              fontFamily: "HostGrotesk",
+                            }}
+                          >
+                            Upload Photo
+                          </Text>
+                        )}
                       </View>
                       <Pressable
                         style={{

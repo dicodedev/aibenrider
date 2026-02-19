@@ -103,7 +103,7 @@ export default function Previewer() {
                   <Image
                     source={{ uri: item.url }}
                     style={styles.mainImage}
-                    contentFit="contain"
+                    resizeMode="contain"
                   />
                 )}
               />
@@ -152,7 +152,6 @@ export default function Previewer() {
 const styles = StyleSheet.create({
   mainImage: {
     width: width,
-
   },
   thumbs: {
     height: "100%",
