@@ -66,7 +66,7 @@ export default function login() {
     } catch (error: any) {
       Toast.show({
         type: "error",
-        text1: "Failed to register",
+        text1: "Failed to login",
         text2:
           (error.errors !== undefined && error.errors[0]
             ? error.errors[0]

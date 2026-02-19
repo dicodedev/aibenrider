@@ -23,6 +23,7 @@ import { Upload } from "@/components/account/upload";
 import { DropdownComponent } from "@/components/custom-dropdown";
 import { CustomModal } from "@/components/custom-modal";
 import { InputError } from "@/components/input-error";
+import ScalingDots from "@/components/scaling-dots";
 import { appSlice } from "@/store/appSlice";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as ImagePicker from "expo-image-picker";
@@ -68,7 +69,9 @@ export default function EditVehicle() {
 
   const [targetItem, setTargetItem] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [deleteSuccess, setDeleteSuccess] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [deleteVehicle, setDeleteVehicle] = useState(false);
 
   const swiperRef = useRef(null);
 
@@ -249,6 +252,14 @@ export default function EditVehicle() {
     }
   }).current;
 
+  useEffect(() => {
+    !visible && setTargetItem(null);
+  }, [visible]);
+
+  useEffect(() => {
+    setVisible(targetItem ? true : false);
+  }, [targetItem]);
+
   return (
     <View
       style={{
@@ -267,6 +278,25 @@ export default function EditVehicle() {
               data={targetItem}
               setImages={setImages}
               setVisible={setVisible}
+            />
+          )
+        }
+      />
+
+      <CustomModal
+        setVisible={setDeleteVehicle}
+        visible={deleteVehicle}
+        content={
+          deleteSuccess ? (
+            <SuccessModal
+              setVisible={setDeleteVehicle}
+              setDone={setDeleteSuccess}
+            />
+          ) : (
+            <DeleteModal
+              setDone={setDeleteSuccess}
+              data={vehicle}
+              setVisible={setDeleteVehicle}
             />
           )
         }
@@ -308,7 +338,7 @@ export default function EditVehicle() {
           </Text>
         </Pressable>
         <Pressable
-          onPress={() => router.push("/account/vehicles/select-service")}
+          onPress={() => setDeleteVehicle(true)}
           style={{
             width: "100%",
             backgroundColor: "#EEEEEE",
@@ -1065,13 +1095,158 @@ const RemoveModal = ({ setVisible, setImages, data }) => {
   );
 };
 
-const SuccessModal = ({ setVisible, setDone }) => {
-  const [text, setText] = useState("");
+const DeleteModal = ({ setVisible, data, setDone }) => {
+  const [loading, setLoading] = useState(false);
 
+  const removeItem = async () => {
+    try {
+      setLoading(true);
+      const res = await appService.deleteVehicle(data.id);
+
+      setDone(true);
+    } catch (error: any) {
+      Toast.show({
+        type: "error",
+        text1: "Failed to register",
+        text2:
+          (error.errors !== undefined && error.errors[0]
+            ? error.errors[0]
+            : error.message) || "Something went wrong",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <View
+      style={{
+        backgroundColor: "#fff",
+        width: "70%",
+        borderRadius: 30,
+        padding: 30,
+        gap: 30,
+        alignItems: "center",
+      }}
+    >
+      <Svg width="78" height="78" viewBox="0 0 78 78" fill="none">
+        <Circle
+          opacity="0.6"
+          cx="38.8433"
+          cy="38.8433"
+          r="38.8433"
+          fill="#FF7979"
+        />
+        <Circle
+          opacity="0.6"
+          cx="38.8431"
+          cy="38.8432"
+          r="31.7161"
+          fill="#FF7979"
+        />
+        <Circle cx="38.8428" cy="38.8433" r="24.5889" fill="#FF7979" />
+        <Path
+          d="M35.0262 28.5594C35.2207 28.1038 35.6205 27.8196 36.0563 27.8196H40.3931C40.829 27.8196 41.2288 28.1038 41.4233 28.5594L41.6827 29.157H45.1406C45.7781 29.157 46.2932 29.7547 46.2932 30.4945C46.2932 31.2343 45.7781 31.832 45.1406 31.832H31.3089C30.6713 31.832 30.1562 31.2343 30.1562 30.4945C30.1562 29.7547 30.6713 29.157 31.3089 29.157H34.7668L35.0262 28.5594ZM31.3089 33.1694H45.1406V46.5441C45.1406 48.0195 44.1068 49.219 42.8353 49.219H33.6142C32.3427 49.219 31.3089 48.0195 31.3089 46.5441V33.1694ZM34.7668 35.8444C34.4498 35.8444 34.1905 36.1453 34.1905 36.5131V45.8754C34.1905 46.2432 34.4498 46.5441 34.7668 46.5441C35.0838 46.5441 35.3431 46.2432 35.3431 45.8754V36.5131C35.3431 36.1453 35.0838 35.8444 34.7668 35.8444ZM38.2247 35.8444C37.9078 35.8444 37.6484 36.1453 37.6484 36.5131V45.8754C37.6484 46.2432 37.9078 46.5441 38.2247 46.5441C38.5417 46.5441 38.8011 46.2432 38.8011 45.8754V36.5131C38.8011 36.1453 38.5417 35.8444 38.2247 35.8444ZM41.6827 35.8444C41.3657 35.8444 41.1063 36.1453 41.1063 36.5131V45.8754C41.1063 46.2432 41.3657 46.5441 41.6827 46.5441C41.9996 46.5441 42.259 46.2432 42.259 45.8754V36.5131C42.259 36.1453 41.9996 35.8444 41.6827 35.8444Z"
+          fill="#A40000"
+        />
+      </Svg>
+      <View>
+        <Text
+          style={{
+            color: "#000000",
+            fontFamily: "HostGroteskBold",
+            fontSize: 18,
+            marginBottom: 3,
+            textAlign: "center",
+          }}
+        >
+          Delete Vehicle
+        </Text>
+        <Text
+          style={{
+            color: "#000000",
+            fontFamily: "HostGroteskBold",
+            fontSize: 12,
+            marginBottom: 3,
+            textAlign: "center",
+          }}
+        >
+          You are about to delete this vehicle. Do you want to proceed?
+        </Text>
+      </View>
+      <View
+        style={{
+          marginHorizontal: 20,
+          gap: 20,
+          width: "100%",
+        }}
+      >
+        <Pressable
+          onPress={() => setVisible(false)}
+          style={{
+            width: "100%",
+            backgroundColor: "#F5F5F5",
+            paddingVertical: 18,
+            borderRadius: 12,
+          }}
+        >
+          <Text
+            style={{
+              color: "#000000",
+              textAlign: "center",
+              fontFamily: "HostGroteskBold",
+              fontSize: 12,
+            }}
+          >
+            CANCEL
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={removeItem}
+          style={{
+            width: "100%",
+            backgroundColor: "#100152",
+            paddingVertical: 18,
+            borderRadius: 12,
+            opacity: 1,
+          }}
+        >
+          {loading ? (
+            <ScalingDots
+              dotCount={3}
+              dotSize={9}
+              dotColor="#ffffff"
+              speed={300}
+              style={{
+                marginVertical: 5,
+              }}
+              scaleRange={[1, 1.5]}
+            />
+          ) : (
+            <Text
+              style={{
+                color: "#fff",
+                textAlign: "center",
+                fontFamily: "HostGroteskBold",
+                fontSize: 12,
+              }}
+            >
+              DELETE
+            </Text>
+          )}
+        </Pressable>
+      </View>
+    </View>
+  );
+};
+
+const SuccessModal = ({ setVisible, setDone }) => {
   useEffect(() => {
     setTimeout(() => {
       setVisible(false);
       setDone(false);
+
+      router.push("/account/vehicles");
     }, 1000);
   }, []);
   return (
@@ -1105,7 +1280,7 @@ const SuccessModal = ({ setVisible, setDone }) => {
           textAlign: "center",
         }}
       >
-        Successfully Removed
+        Successfully Deleted
       </Text>
     </View>
   );

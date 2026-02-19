@@ -37,6 +37,10 @@ export const appService = {
     const res = await api.put("vehicle/" + id, payload);
     return res.data;
   },
+  deleteVehicle: async (id) => {
+    const res = await api.delete("vehicle/" + id);
+    return res.data;
+  },
   uploadVehicleImage: async (payload, setProgress) => {
     const res = await api.post("vehicle/image/upload", payload, {
       headers: {
