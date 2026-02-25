@@ -5,6 +5,14 @@ export const appService = {
     const res = await api.get(`/user/details`);
     return res.data;
   },
+  getRecentRequests: async () => {
+    const res = await api.get(`/order/requests?per_page=5`);
+    return res.data;
+  },
+  getRequests: async () => {
+    const res = await api.get(`/order/requests`);
+    return res.data;
+  },
   getCategories: async () => {
     const res = await api.get(`/vehicle_category/all?per_page=10000`);
     return res.data;
@@ -17,8 +25,20 @@ export const appService = {
     const res = await api.get(`/vehicle/` + id);
     return res.data;
   },
+  getOrder: async (id) => {
+    const res = await api.get(`/order/` + id);
+    return res.data;
+  },
   activateVehicle: async (id) => {
     const res = await api.get(`/vehicle/${id}/activate`);
+    return res.data;
+  },
+  setCurrentCordinates: async (payload) => {
+    const res = await api.put(`/user/set-cordinates`, payload);
+    return res.data;
+  },
+  setPushToken: async (payload) => {
+    const res = await api.put(`/user/set-push-token`, payload);
     return res.data;
   },
   setServices: async (payload) => {

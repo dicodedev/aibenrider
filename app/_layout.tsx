@@ -14,6 +14,9 @@ import AppLoader from "@/providers/AppLoader";
 import { store } from "@/store";
 import { Provider } from "react-redux";
 
+import * as Notifications from "expo-notifications";
+import { Platform } from "react-native";
+
 import Toast, { BaseToast, ErrorToast } from "react-native-toast-message";
 
 export const unstable_settings = {
@@ -46,8 +49,31 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
+    const setupChannels = async () => {
+      if (Platform.OS === "android") {
+        await Notifications.setNotificationChannelAsync("chat", {
+          name: "Chat Messages",
+          importance: Notifications.AndroidImportance.HIGH,
+          sound: "chat.wav",
+          vibrationPattern: [0, 250, 250, 250],
+          enableVibrate: true,
+          lockscreenVisibility:
+            Notifications.AndroidNotificationVisibility.PUBLIC,
+        });
+
+        await Notifications.setNotificationChannelAsync("normal", {
+          name: "General Notifications",
+          importance: Notifications.AndroidImportance.DEFAULT,
+          sound: "normal.wav",
+          vibrationPattern: [0, 100, 100, 100],
+        });
+      }
+    };
+
     if (loaded) {
       SplashScreen.hideAsync();
+
+      setupChannels();
     }
   }, [loaded]);
 
@@ -111,7 +137,10 @@ export default function RootLayout() {
             <Stack.Screen name="onboard" options={{ headerShown: false }} />
             <Stack.Screen name="referral" options={{ headerShown: false }} />
             <Stack.Screen name="login" options={{ headerShown: false }} />
-            <Stack.Screen name="set-password" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="set-password"
+              options={{ headerShown: false }}
+            />
             <Stack.Screen
               name="complete-profile"
               options={{ headerShown: false }}

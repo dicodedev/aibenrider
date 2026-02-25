@@ -1,24 +1,27 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { Skeleton } from "moti/skeleton";
 import { Image, Pressable, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
-const products = [
-  require("@/assets/images/landing/Shoe.png"),
-  require("@/assets/images/landing/Bag.png"),
-  require("@/assets/images/landing/Jug.png"),
-  require("@/assets/images/landing/Banana.png"),
-  require("@/assets/images/landing/Orange.png"),
-  require("@/assets/images/landing/Nike.png"),
-];
+import ProfilePicture from "@/assets/images/account/profile-picture.png";
+import { requestCardConfig } from "@/constants/app";
 
-export const RequestCard = ({ index }: { index: number }) => {
-  const image = products[index];
-  const [liked, setLiked] = useState(false);
+export const RequestCard = ({
+  data,
+  loading,
+  completed = false,
+}: {
+  data: any;
+  loading: boolean;
+  completed: boolean;
+}) => {
   return (
     <Pressable
-      onPress={() => router.push("/account/dashboard/trip-details")}
-      key={index}
+      onPress={
+        loading
+          ? () => {}
+          : () => router.push("/account/dashboard/trip-details/" + data?.id)
+      }
       style={{
         flexDirection: "row",
         gap: 10,
@@ -33,26 +36,49 @@ export const RequestCard = ({ index }: { index: number }) => {
         style={{
           flexDirection: "row",
           gap: 20,
+          flex: 1,
+          overflow: "hidden",
         }}
       >
-        <Image
-          source={{ uri: "https://avatar.iran.liara.run/public/" + index }}
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 100,
-          }}
-        />
-        <View>
-          <Text
+        {loading ? (
+          <Skeleton colorMode="light" height={40} width={40} radius={100} />
+        ) : (
+          <Image
+            source={
+              data
+                ? data?.user.picture && data?.user.picture != "null"
+                  ? { uri: data?.user.picture }
+                  : ProfilePicture
+                : ProfilePicture
+            }
             style={{
-              fontSize: 17,
-              fontFamily: "HostGroteskBold",
-              marginBottom: 8,
+              width: 40,
+              height: 40,
+              borderRadius: 100,
             }}
-          >
-            Omotola K.
-          </Text>
+          />
+        )}
+
+        <View
+          style={{
+            flex: 1,
+            // borderWidth: 1,
+          }}
+        >
+          {loading ? (
+            <Skeleton colorMode="light" height={20} width={100} radius={5} />
+          ) : (
+            <Text
+              style={{
+                fontSize: 17,
+                fontFamily: "HostGroteskBold",
+                marginBottom: 8,
+              }}
+            >
+              {data.user.name}
+            </Text>
+          )}
+
           <View
             style={{
               flexDirection: "row",
@@ -77,15 +103,22 @@ export const RequestCard = ({ index }: { index: number }) => {
                 stroke-linejoin="round"
               />
             </Svg>
-            <Text
-              style={{
-                fontSize: 13,
-                color: "#6A6A6A",
-                fontFamily: "HostGroteskBold",
-              }}
-            >
-              Domino’s Pizza
-            </Text>
+            {loading ? (
+              <Skeleton colorMode="light" height={20} width={100} radius={5} />
+            ) : (
+              <Text
+                style={{
+                  fontSize: 13,
+                  color: "#6A6A6A",
+                  fontFamily: "HostGroteskBold",
+                  width: "90%",
+                }}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {data.pickup_address.split(",")[0]}
+              </Text>
+            )}
           </View>
           <View
             style={{
@@ -100,61 +133,109 @@ export const RequestCard = ({ index }: { index: number }) => {
                 fill="black"
               />
             </Svg>
-            <Text
-              style={{
-                fontSize: 13,
-                color: "#1B1B1B",
-                fontFamily: "HostGroteskBold",
-              }}
-            >
-              Ikeja City Mall
-            </Text>
+
+            {loading ? (
+              <Skeleton colorMode="light" height={20} width={100} radius={5} />
+            ) : (
+              <Text
+                style={{
+                  fontSize: 13,
+                  color: "#1B1B1B",
+                  fontFamily: "HostGroteskBold",
+                  width: "90%",
+                }}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {data.customer_address.split(",")[0]}
+              </Text>
+            )}
           </View>
         </View>
       </View>
       <View
         style={{
           justifyContent: "space-between",
+          width: 120,
+          // borderWidth: 1,
         }}
       >
-        <Text
-          style={{
-            fontSize: 14,
-            fontFamily: "HostGroteskBold",
-            marginBottom: 6,
-          }}
-        >
-          ₦2,000
-        </Text>
-        <Text
-          style={{
-            fontSize: 13,
-            fontFamily: "HostGroteskBold",
-            marginBottom: 6,
-            color: "#6A6A6A",
-          }}
-        >
-          12min
-        </Text>
-        <Pressable
-          style={{
-            borderRadius: 8,
-            backgroundColor: "#100152",
-            padding: 7,
-            paddingHorizontal: 15,
-          }}
-        >
+        {loading ? (
+          <Skeleton colorMode="light" height={20} width={100} radius={5} />
+        ) : (
           <Text
             style={{
-              fontSize: 12,
+              fontSize: 14,
               fontFamily: "HostGroteskBold",
-              color: "#F5F5F5",
-              textAlign: "center",
+              marginBottom: 6,
+              textAlign: "right",
             }}
           >
-            Accept Ride
+            ₦ {Number(data.rider_price).toLocaleString()}
           </Text>
-        </Pressable>
+        )}
+        {loading ? (
+          <Skeleton colorMode="light" height={20} width={100} radius={5} />
+        ) : (
+          <Text
+            style={{
+              fontSize: 14,
+              fontFamily: "HostGroteskBold",
+              marginBottom: 6,
+              textAlign: "right",
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 13,
+                fontFamily: "HostGroteskBold",
+                marginBottom: 8,
+                color: "#6A6A6A",
+                textAlign: "right",
+              }}
+            >
+              {data.distance}
+            </Text>
+          </Text>
+        )}
+
+        {loading ? (
+          <Skeleton colorMode="light" height={40} width={100} radius={8} />
+        ) : !completed ? (
+          <Pressable
+            onPress={() => {}}
+            style={{
+              borderRadius: 8,
+              backgroundColor: requestCardConfig[data.type].background,
+              padding: 7,
+              paddingHorizontal: 15,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 12,
+                fontFamily: "HostGroteskBold",
+                color: "#F5F5F5",
+                textAlign: "center",
+              }}
+            >
+              Accept {requestCardConfig[data.type].text}
+            </Text>
+          </Pressable>
+        ) : (
+          <View>
+            <Text
+              style={{
+                fontSize: 12,
+                fontFamily: "HostGroteskBold",
+                color: "#9F9F9F",
+                textAlign: "left",
+              }}
+            >
+              Completed
+            </Text>
+          </View>
+        )}
       </View>
     </Pressable>
   );

@@ -10,19 +10,31 @@ import {
 import { GlowBG } from "@/components/account/glow-bg";
 import { Menu } from "@/components/account/menu";
 import { RequestCard } from "@/components/account/request-card";
-import { router } from "expo-router";
-import { useRef, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 
+import { appService } from "@/api/appService";
 import ProfilePicture from "@/assets/images/account/profile-picture.png";
 
 export default function HomeScreen() {
   const app = useSelector((state: any) => state.app);
-  const [search, setSearch] = useState("");
+  const [requests, setRequests] = useState(null);
 
   const data = app.user;
 
+  const fetchRequests = async () => {
+    const res = await appService.getRecentRequests();
+    console.log("res", res.data[0].packager);
+    setRequests(res.data);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchRequests();
+    }, []),
+  );
   return (
     <View style={{ flex: 1 }}>
       <GlowBG />
@@ -197,9 +209,15 @@ export default function HomeScreen() {
               gap: 10,
             }}
           >
-            {[1, 2, 3, 4, 5].map((item, key) => (
-              <RequestCard key={key} index={item} />
-            ))}
+            {requests
+              ? requests.map((item, key) => (
+                  <RequestCard key={key} loading={false} data={item} />
+                ))
+              : Array(4)
+                  .fill(0)
+                  .map((item, key) => (
+                    <RequestCard data={{}} key={key} loading={true} />
+                  ))}
           </View>
         </ScrollView>
       </SafeAreaView>

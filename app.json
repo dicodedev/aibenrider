@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "AibenRider",
-    "slug": "aibenrider",
+    "name": "AibenRides",
+    "slug": "aibenrides",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -51,6 +51,12 @@
           "image": "./assets/images/splash-icon.png",
           "resizeMode": "cover",
           "dark": {}
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "sounds": ["./assets/sounds/chat.wav", "./assets/sounds/normal.wav"]
         }
       ]
     ],

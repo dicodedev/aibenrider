@@ -7,6 +7,7 @@ const initialState = {
   navOpen: false,
   ref: null,
   isLoggedIn: false,
+  pushToken: null,
 };
 
 export const appSlice = createSlice({
@@ -16,6 +17,10 @@ export const appSlice = createSlice({
     setUser: (state, action) => {
       const value = action.payload;
       state.user = value;
+    },
+    setPushToken: (state, action) => {
+      const value = action.payload;
+      state.pushToken = value;
     },
     setVehiclePayload: (state, action) => {
       const value = action.payload;

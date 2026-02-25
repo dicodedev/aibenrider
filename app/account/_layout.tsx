@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Pressable, Text, TouchableOpacity, View } from "react-native";
+import {
+  Platform,
+  Pressable,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 import { useDispatch, useSelector } from "react-redux";
 
@@ -15,8 +21,12 @@ import ProfilePicture from "@/assets/images/account/profile-picture.png";
 
 import { appService } from "@/api/appService";
 
+import { useCurrentLocation } from "@/hooks/use-current-location";
 import { appSlice } from "@/store/appSlice";
 import NetInfo from "@react-native-community/netinfo";
+
+import * as Device from "expo-device";
+import * as Notifications from "expo-notifications";
 
 export default function AccountLayout() {
   const app = useSelector((state: any) => state.app);
@@ -25,6 +35,8 @@ export default function AccountLayout() {
   const [isOnline, setIsOnline] = useState(true);
 
   const dispatch = useDispatch();
+
+  const { coords, address, loading, error, refresh } = useCurrentLocation();
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
@@ -46,6 +58,63 @@ export default function AccountLayout() {
 
     console.log("path", pathname);
   }, [, pathname]);
+
+  useEffect(() => {
+    async function registerForPushNotifications() {
+      if (!Device.isDevice) {
+        console.log("Must use physical device for Push Notifications");
+        return;
+      }
+
+      const { status: existingStatus } =
+        await Notifications.getPermissionsAsync();
+
+      let finalStatus = existingStatus;
+
+      if (existingStatus !== "granted") {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      if (finalStatus !== "granted") {
+        console.log("Permission not granted");
+        return;
+      }
+
+      const token = (await Notifications.getExpoPushTokenAsync()).data;
+      dispatch(appSlice.actions.setPushToken(token));
+      console.log("Expo Push Token:", token);
+    }
+    registerForPushNotifications();
+
+    const setCordinates = async () => {
+      await appService.setCurrentCordinates({
+        longitude: coords.longitude.toString(),
+        latitude: coords.latitude.toString(),
+      });
+    };
+    coords && setCordinates();
+  }, []);
+
+  useEffect(() => {
+    if (!app.pushToken) return;
+
+    const setPushToken = async () => {
+      const res = await appService.setPushToken(
+        Platform.OS === "android"
+          ? {
+              android_push_token: app.pushToken,
+            }
+          : {
+              ios_push_token: app.pushToken,
+            },
+      );
+
+      console.log(res.data);
+    };
+
+    setPushToken();
+  }, [app.pushToken]);
 
   useEffect(() => {
     !isOnline && router.push("/account/no-internet");

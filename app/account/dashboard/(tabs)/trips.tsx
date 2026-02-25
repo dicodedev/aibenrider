@@ -1,19 +1,18 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { appService } from "@/api/appService";
 import { GlowBG } from "@/components/account/glow-bg";
 import { RequestCard } from "@/components/account/request-card";
 import { arrowLeft } from "@/icons";
-import { router, useNavigation } from "expo-router";
-import { useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path, SvgXml } from "react-native-svg";
 import { useSelector } from "react-redux";
 
 export default function Trips() {
   const app = useSelector((state: any) => state.app);
-  const [search, setSearch] = useState("");
-
-  const navigation = useNavigation();
+  const [section, setSection] = useState(0);
 
   return (
     <View style={{ flex: 1 }}>
@@ -70,7 +69,8 @@ export default function Trips() {
               marginVertical: 30,
             }}
           >
-            <View
+            <Pressable
+              onPress={() => setSection(0)}
               style={{
                 backgroundColor: "#fff",
                 flexDirection: "row",
@@ -114,10 +114,11 @@ export default function Trips() {
                   fill="black"
                 />
               </Svg>
-            </View>
-            <View
+            </Pressable>
+            <Pressable
+              onPress={() => setSection(1)}
               style={{
-                backgroundColor: "#EAEAEA",
+                backgroundColor: section ? "#ffffff" : "#EAEAEA",
                 flexDirection: "row",
                 padding: 10,
                 paddingHorizontal: 15,
@@ -134,24 +135,89 @@ export default function Trips() {
               >
                 Completed Trips
               </Text>
-            </View>
+            </Pressable>
           </View>
-          <View
-            style={{
-              marginTop: 15,
-              paddingBottom: 15,
-              gap: 10,
-            }}
-          >
-            {[1, 2, 3, 4, 5].map((item, key) => (
-              <RequestCard key={key} index={item} />
-            ))}
-          </View>
+          {section ? <Completed /> : <Pending />}
         </ScrollView>
       </SafeAreaView>
     </View>
   );
 }
+
+const Pending = () => {
+  const [requests, setRequests] = useState(null);
+
+  const fetchRequests = async () => {
+    const res = await appService.getRequests();
+    console.log("res", res.data[0].packager);
+    setRequests(res.data);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchRequests();
+    }, []),
+  );
+  return (
+    <View
+      style={{
+        marginTop: 15,
+        paddingBottom: 15,
+        gap: 10,
+      }}
+    >
+      {requests
+        ? requests.map((item, key) => (
+            <RequestCard key={key} loading={false} data={item} />
+          ))
+        : Array(4)
+            .fill(0)
+            .map((item, key) => (
+              <RequestCard data={{}} key={key} loading={true} />
+            ))}
+    </View>
+  );
+};
+
+const Completed = () => {
+  const [requests, setRequests] = useState(null);
+
+  const fetchRequests = async () => {
+    const res = await appService.getRequests();
+    console.log("res", res.data[0].packager);
+    setRequests(res.data);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchRequests();
+    }, []),
+  );
+  return (
+    <View
+      style={{
+        marginTop: 15,
+        paddingBottom: 15,
+        gap: 10,
+      }}
+    >
+      {requests
+        ? requests.map((item, key) => (
+            <RequestCard
+              completed={true}
+              key={key}
+              loading={false}
+              data={item}
+            />
+          ))
+        : Array(4)
+            .fill(0)
+            .map((item, key) => (
+              <RequestCard data={{}} key={key} loading={true} />
+            ))}
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   headerContainer: {

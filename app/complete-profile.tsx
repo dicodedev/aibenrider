@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 import * as ImagePicker from "expo-image-picker";
 
@@ -124,7 +124,7 @@ export default function completeProfile() {
         ...item,
         value: item.id,
         label: item.name,
-      }))
+      })),
     );
   };
 
@@ -138,7 +138,7 @@ export default function completeProfile() {
         ...item,
         value: item.id,
         label: item.name,
-      }))
+      })),
     );
   };
 
@@ -151,7 +151,7 @@ export default function completeProfile() {
           ...item,
           value: item.id,
           label: item.name,
-        }))
+        })),
       );
     };
     fetchCountries();
