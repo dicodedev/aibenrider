@@ -86,7 +86,9 @@ export default function AccountLayout() {
       console.log("Expo Push Token:", token);
     }
     registerForPushNotifications();
+  }, []);
 
+  useEffect(() => {
     const setCordinates = async () => {
       await appService.setCurrentCordinates({
         longitude: coords.longitude.toString(),
@@ -94,7 +96,7 @@ export default function AccountLayout() {
       });
     };
     coords && setCordinates();
-  }, []);
+  }, [coords]);
 
   useEffect(() => {
     if (!app.pushToken) return;
@@ -103,10 +105,10 @@ export default function AccountLayout() {
       const res = await appService.setPushToken(
         Platform.OS === "android"
           ? {
-              android_push_token: app.pushToken,
+              rider_android_push_token: app.pushToken,
             }
           : {
-              ios_push_token: app.pushToken,
+              rider_ios_push_token: app.pushToken,
             },
       );
 

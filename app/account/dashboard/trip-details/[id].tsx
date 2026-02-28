@@ -8,7 +8,6 @@ import {
 } from "react-native";
 
 import { appService } from "@/api/appService";
-import { Call } from "@/components/account/call";
 import { Chat } from "@/components/account/chat";
 import { requestCardConfig } from "@/constants/app";
 import { arrowLeft } from "@/icons";
@@ -25,31 +24,89 @@ import { Capitalize } from "@/utils/helper";
 
 export default function TripDetails() {
   const app = useSelector((state: any) => state.app);
+  const user = app.user;
+
   const [call, setCall] = useState(false);
-  const [chat, setChat] = useState(false);
+
+  const [pChat, setPChat] = useState(false);
+  const [cChat, setCChat] = useState(false);
 
   const [order, setOrder] = useState(null);
+
+  const [packagerChats, setPackagerChats] = useState(null);
+  const [customerChats, setCustomerChats] = useState(null);
 
   const { id } = useLocalSearchParams();
 
   const fetchOrderDetails = async () => {
     const res = await appService.getOrder(id);
-    console.log("order", res.data);
+    // console.log("order", res.data);
     setOrder(res.data);
+  };
+
+  const getPackagerChat = async () => {
+    let type = `rider_${user?.id}-packager_${order?.packager?.id}`;
+    console.log("type", type);
+
+    const res = await appService.openChat({
+      type,
+      order_id: order?.id,
+    });
+    console.log("customer chats", res.data);
+    setPackagerChats(res.data);
+  };
+
+  const getCustomerChat = async () => {
+    let type = `customer_${order?.user?.id}-rider_${user?.id}`;
+    console.log("type", type);
+
+    const res = await appService.openChat({
+      type,
+      order_id: order?.id,
+    });
+    console.log("customer chats", res.data);
+    setCustomerChats(res.data);
   };
 
   useEffect(() => {
     fetchOrderDetails();
   }, []);
+
+  useEffect(() => {
+    if (!order) return;
+    // if (!order || !order.rider) return;
+
+    getPackagerChat();
+    getCustomerChat();
+  }, [order]);
   return (
     <View
       style={{
         flex: 1,
       }}
     >
-      {call && <Call setCall={setCall} />}
+      {/* {call && <Call setCall={setCall} />} */}
 
-      <Chat visible={chat} setVisible={setChat} />
+      {order && customerChats && (
+        <Chat
+          rider={user}
+          roomId={`chat_${customerChats?.chat.id}`}
+          user={order?.user}
+          visible={cChat}
+          data={customerChats?.messages}
+          setVisible={setCChat}
+        />
+      )}
+      {order && packagerChats && (
+        <Chat
+          rider={user}
+          roomId={`chat_${packagerChats?.chat.id}`}
+          user={order?.packager}
+          visible={pChat}
+          data={packagerChats?.messages}
+          setVisible={setPChat}
+        />
+      )}
 
       {order && order.rider && (
         <View
@@ -361,7 +418,7 @@ export default function TripDetails() {
                         justifyContent: "center",
                         alignItems: "center",
                       }}
-                      onPress={() => setChat(true)}
+                      onPress={() => setPChat(true)}
                     >
                       <Svg
                         width="26"
@@ -630,7 +687,7 @@ export default function TripDetails() {
                         justifyContent: "center",
                         alignItems: "center",
                       }}
-                      onPress={() => setChat(true)}
+                      onPress={() => setCChat(true)}
                     >
                       <Svg
                         width="26"

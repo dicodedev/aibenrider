@@ -116,7 +116,7 @@ export const RequestCard = ({
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >
-                {data.pickup_address.split(",")[0]}
+                {data?.pickup_address?.split(",")[0]}
               </Text>
             )}
           </View>
@@ -147,7 +147,7 @@ export const RequestCard = ({
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >
-                {data.customer_address.split(",")[0]}
+                {data?.customer_address?.split(",")[0]}
               </Text>
             )}
           </View>

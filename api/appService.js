@@ -45,6 +45,10 @@ export const appService = {
     const res = await api.post("rider/set-services", payload);
     return res.data;
   },
+  openChat: async (payload) => {
+    const res = await api.post("chat/open", payload);
+    return res.data;
+  },
   getVehicles: async () => {
     const res = await api.get(`/vehicle/all?per_page=10000`);
     return res.data;

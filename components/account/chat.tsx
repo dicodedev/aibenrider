@@ -1,5 +1,5 @@
 import { arrowLeft } from "@/icons";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Image,
   Modal,
@@ -11,14 +11,84 @@ import {
 } from "react-native";
 import Svg, { Path, SvgXml } from "react-native-svg";
 
+import ProfilePicture from "@/assets/images/account/profile-picture.png";
+
 export const Chat = ({
+  rider,
+  user,
   visible,
   setVisible,
+  data,
+  roomId,
 }: {
+  rider: any;
+  user: any;
   visible: boolean;
   setVisible: any;
+  data: any;
+  roomId: string;
 }) => {
   const [text, setText] = useState("");
+  const [messages, setMessages] = useState(data);
+
+  console.log("m", messages);
+
+  const role = user.roles[0].name;
+
+  const socketRef = useRef(null);
+
+  useEffect(() => {
+    const socket = new WebSocket("wss://socket.aibenmart.com/ws");
+
+    socket.onopen = () => {
+      console.log("Connected to WebSocket server");
+      socket.send(
+        JSON.stringify({
+          type: "init",
+          user: rider,
+          roomId,
+        }),
+      );
+    };
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log("data", data);
+
+      if (data.type == "messaged") {
+        setMessages([...messages, data.data.data]);
+      }
+    };
+
+    socket.onerror = (error) => {
+      console.log("WebSocket error:", error.message);
+    };
+
+    socket.onclose = () => {
+      console.log("WebSocket disconnected");
+    };
+
+    socketRef.current = socket;
+
+    return () => {
+      socket.close();
+    };
+  }, []);
+
+  const sendMessage = () => {
+    if (!text || text == "") return;
+
+    socketRef.current?.send(
+      JSON.stringify({
+        type: "message",
+        user: rider,
+        roomId,
+        message: text,
+      }),
+    );
+
+    setText("");
+  };
   return (
     <Modal
       animationType="slide" // "none" | "slide" | "fade"
@@ -79,7 +149,11 @@ export const Chat = ({
                 }}
               >
                 <Image
-                  source={{ uri: "https://avatar.iran.liara.run/public" }}
+                  source={
+                    user?.picture && user?.picture != "null"
+                      ? { uri: user?.picture }
+                      : ProfilePicture
+                  }
                   style={{
                     width: "100%",
                     height: "100%",
@@ -96,7 +170,7 @@ export const Chat = ({
                     marginBottom: 3,
                   }}
                 >
-                  Your Rider
+                  {role != "customer" ? "Packager" : "Custoner"}
                 </Text>
                 <Text
                   style={{
@@ -106,7 +180,7 @@ export const Chat = ({
                     marginBottom: 3,
                   }}
                 >
-                  Aisha Yusuf
+                  {user.name}
                 </Text>
               </View>
             </View>
@@ -123,47 +197,53 @@ export const Chat = ({
                 padding: 25,
               }}
             >
-              <View
-                style={{
-                  padding: 10,
-                  backgroundColor: "rgba(255, 218, 173, 0.6)",
-                  alignSelf: "flex-start",
-                  maxWidth: "80%",
-                  borderRadius: 20,
-                  borderTopLeftRadius: 0,
-                }}
-              >
-                <Text
-                  style={{
-                    color: "#4B4B4B",
-                    fontFamily: "Outfit",
-                    fontSize: 16,
-                  }}
-                >
-                  History is what you need to know about quantum computing it
-                  doesn’t have to be that complicated
-                </Text>
-              </View>
-              <View
-                style={{
-                  padding: 10,
-                  backgroundColor: "#FFFFFF",
-                  alignSelf: "flex-end",
-                  maxWidth: "80%",
-                  borderRadius: 20,
-                  borderTopRightRadius: 0,
-                }}
-              >
-                <Text
-                  style={{
-                    color: "#4B4B4B",
-                    fontFamily: "Outfit",
-                    fontSize: 16,
-                  }}
-                >
-                  it doesn’t have to be that complicated
-                </Text>
-              </View>
+              {messages.map((item, key) =>
+                item.from_id != rider.id ? (
+                  <View
+                    key={key}
+                    style={{
+                      padding: 10,
+                      backgroundColor: "rgba(255, 218, 173, 0.6)",
+                      alignSelf: "flex-start",
+                      maxWidth: "80%",
+                      borderRadius: 20,
+                      borderTopLeftRadius: 0,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#4B4B4B",
+                        fontFamily: "Outfit",
+                        fontSize: 16,
+                      }}
+                    >
+                      {item.message}
+                    </Text>
+                  </View>
+                ) : (
+                  <View
+                    key={key}
+                    style={{
+                      padding: 10,
+                      backgroundColor: "#FFFFFF",
+                      alignSelf: "flex-end",
+                      maxWidth: "80%",
+                      borderRadius: 20,
+                      borderTopRightRadius: 0,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#4B4B4B",
+                        fontFamily: "Outfit",
+                        fontSize: 16,
+                      }}
+                    >
+                     {item.message}
+                    </Text>
+                  </View>
+                ),
+              )}
             </View>
           </ScrollView>
           <View
@@ -201,6 +281,7 @@ export const Chat = ({
               />
               <Pressable
                 hitSlop={40}
+                onPress={sendMessage}
                 style={{
                   marginTop: 10,
                 }}
