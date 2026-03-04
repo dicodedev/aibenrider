@@ -4,13 +4,16 @@ import {
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   View,
 } from "react-native";
+
+const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 import { appService } from "@/api/appService";
 import { Chat } from "@/components/account/chat";
 import { requestCardConfig } from "@/constants/app";
-import { arrowLeft } from "@/icons";
+import { arrowLeft, locationMarker } from "@/icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { Skeleton } from "moti/skeleton";
 import { useEffect, useState } from "react";
@@ -20,13 +23,29 @@ import { useSelector } from "react-redux";
 
 import ProfilePicture from "@/assets/images/account/profile-picture.png";
 
+import { SuccessAlertModal } from "@/components/account/success-alert-modal";
+import { CustomModal } from "@/components/custom-modal";
+import ScalingDots from "@/components/scaling-dots";
 import { Capitalize } from "@/utils/helper";
+import { Modal } from "react-native";
+import Toast from "react-native-toast-message";
+
+import MapView, { Marker, Polyline } from "react-native-maps";
 
 export default function TripDetails() {
   const app = useSelector((state: any) => state.app);
   const user = app.user;
 
   const [call, setCall] = useState(false);
+  const [cancel, setCancel] = useState(false);
+
+  const [cancelled, setCancelled] = useState(false);
+  const [accepted, setAccepted] = useState(false);
+
+  const [accepting, setAccepting] = useState(false);
+
+  const [completed, setCompleted] = useState(false);
+  const [completing, setCompleting] = useState(false);
 
   const [pChat, setPChat] = useState(false);
   const [cChat, setCChat] = useState(false);
@@ -35,42 +54,184 @@ export default function TripDetails() {
 
   const [packagerChats, setPackagerChats] = useState(null);
   const [customerChats, setCustomerChats] = useState(null);
+  const [routeCoords, setRouteCoords] = useState(null);
 
   const { id } = useLocalSearchParams();
 
   const fetchOrderDetails = async () => {
     const res = await appService.getOrder(id);
-    // console.log("order", res.data);
+
+    // console.log(
+    //   "order",
+    //   order,
+    //   res.data.customer_latitude,
+    //   res.data.pickup_latitude,
+    // );
+
     setOrder(res.data);
   };
 
   const getPackagerChat = async () => {
     let type = `rider_${user?.id}-packager_${order?.packager?.id}`;
-    console.log("type", type);
+    // console.log("type", type);
 
     const res = await appService.openChat({
       type,
       order_id: order?.id,
     });
-    console.log("customer chats", res.data);
+
+    // console.log("customer chats", res.data);
     setPackagerChats(res.data);
   };
 
   const getCustomerChat = async () => {
     let type = `customer_${order?.user?.id}-rider_${user?.id}`;
-    console.log("type", type);
+    // console.log("type", type);
 
     const res = await appService.openChat({
       type,
       order_id: order?.id,
     });
-    console.log("customer chats", res.data);
+
+    // console.log("customer chats", res.data);
     setCustomerChats(res.data);
+  };
+
+  // Polyline decoder
+  const decodePolyline = (t) => {
+    let points = [];
+    let index = 0,
+      lat = 0,
+      lng = 0;
+
+    while (index < t.length) {
+      let b,
+        shift = 0,
+        result = 0;
+      do {
+        b = t.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      let dlat = result & 1 ? ~(result >> 1) : result >> 1;
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+      do {
+        b = t.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      let dlng = result & 1 ? ~(result >> 1) : result >> 1;
+      lng += dlng;
+
+      points.push({
+        latitude: lat / 1e5,
+        longitude: lng / 1e5,
+      });
+    }
+
+    return points;
+  };
+
+  const getDirections = async (origin, destination) => {
+    const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+    const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${API_KEY}`;
+
+    const response = await fetch(url);
+    const json = await response.json();
+
+    console.log("json", json?.routes[0].overview_polyline.points);
+
+    if (json?.routes?.length) {
+      setRouteCoords(decodePolyline(json?.routes[0].overview_polyline.points));
+    }
+
+    return null;
+  };
+
+  useEffect(() => {
+    if (!order) return;
+
+    getDirections(
+      {
+        latitude: order.pickup_latitude,
+        longitude: order.pickup_longitude,
+      },
+      {
+        latitude: order.customer_latitude,
+        longitude: order.customer_longitude,
+      },
+    );
+  }, [, order]);
+
+  // useEffect(() => {
+  //   console.log("routeCoords", routeCoords);
+  // }, [, routeCoords]);
+
+  const accept = async () => {
+    try {
+      setAccepting(true);
+
+      await appService.acceptOrder(order.id);
+
+      setAccepted(true);
+    } catch (error: any) {
+      console.log("error", error);
+
+      Toast.show({
+        type: "error",
+        text1: "Acceptance Failed",
+        text2:
+          (error.errors !== undefined && error.errors[0]
+            ? error.errors[0]
+            : error.message) || "Something went wrong",
+      });
+    } finally {
+      setAccepting(false);
+    }
+  };
+
+  const completeOrder = async () => {
+    try {
+      setCompleting(true);
+
+      await appService.updateOrder(order.id, "completed");
+
+      setCompleted(true);
+    } catch (error: any) {
+      console.log("error", error);
+
+      Toast.show({
+        type: "error",
+        text1: "Request Failed",
+        text2:
+          (error.errors !== undefined && error.errors[0]
+            ? error.errors[0]
+            : error.message) || "Something went wrong",
+      });
+    } finally {
+      setCompleting(false);
+    }
   };
 
   useEffect(() => {
     fetchOrderDetails();
   }, []);
+
+  useEffect(() => {
+    if (!cancelled) return;
+
+    fetchOrderDetails();
+  }, [cancelled]);
+
+  useEffect(() => {
+    if (!accepted) return;
+
+    fetchOrderDetails();
+  }, [accepted]);
 
   useEffect(() => {
     if (!order) return;
@@ -87,7 +248,7 @@ export default function TripDetails() {
     >
       {/* {call && <Call setCall={setCall} />} */}
 
-      {order && customerChats && (
+      {order && customerChats && cChat && (
         <Chat
           rider={user}
           roomId={`chat_${customerChats?.chat.id}`}
@@ -97,7 +258,7 @@ export default function TripDetails() {
           setVisible={setCChat}
         />
       )}
-      {order && packagerChats && (
+      {order && packagerChats && pChat && (
         <Chat
           rider={user}
           roomId={`chat_${packagerChats?.chat.id}`}
@@ -108,48 +269,110 @@ export default function TripDetails() {
         />
       )}
 
-      {order && order.rider && (
-        <View
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            backgroundColor: "#fff",
-            width: "100%",
-            paddingVertical: 20,
-            paddingHorizontal: 15,
-            zIndex: 1000,
-          }}
-        >
-          <Pressable
-            onPress={() => {}}
+      {order && (
+        <CancelRide
+          setCancelled={setCancelled}
+          visible={cancel}
+          setVisible={setCancel}
+          data={order}
+        />
+      )}
+
+      {order &&
+        order.rider &&
+        !["completed", "cancelled"].includes(order.full_status) &&
+        order.paid && (
+          <View
             style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              backgroundColor: "#fff",
               width: "100%",
-              backgroundColor: "#100152",
               paddingVertical: 20,
-              borderRadius: 12,
+              paddingHorizontal: 15,
+              zIndex: 1000,
             }}
           >
-            <Text
+            <Pressable
+              onPress={completing ? () => {} : completeOrder}
               style={{
-                color: "#fff",
-                textAlign: "center",
-                fontFamily: "HostGroteskBold",
-                fontSize: 16,
+                width: "100%",
+                backgroundColor: "#100152",
+                paddingVertical: 20,
+                borderRadius: 12,
+                opacity: completing ? 0.5 : 1,
               }}
             >
-              COMPLETE TRIP
-            </Text>
-          </Pressable>
-        </View>
-      )}
+              {completing ? (
+                <ScalingDots
+                  dotCount={3}
+                  dotSize={8}
+                  dotColor="#ffffff"
+                  speed={300}
+                  style={{
+                    marginVertical: 5,
+                  }}
+                  scaleRange={[1, 1.5]}
+                />
+              ) : (
+                <Text
+                  style={{
+                    color: "#fff",
+                    textAlign: "center",
+                    fontFamily: "HostGroteskBold",
+                    fontSize: 16,
+                  }}
+                >
+                  COMPLETE TRIP
+                </Text>
+              )}
+            </Pressable>
+          </View>
+        )}
+
+      <CustomModal
+        setVisible={setCancelled}
+        visible={cancelled}
+        content={
+          <SuccessAlertModal
+            message={"Ride Cancelled!"}
+            visible={cancelled}
+            setVisible={setCancelled}
+          />
+        }
+      />
+
+      <CustomModal
+        setVisible={setAccepted}
+        visible={accepted}
+        content={
+          <SuccessAlertModal
+            message={"Ride Accepted!"}
+            visible={accepted}
+            setVisible={setAccepted}
+          />
+        }
+      />
+
+      <CustomModal
+        setVisible={setCompleted}
+        visible={completed}
+        content={
+          <SuccessAlertModal
+            message={"Ride Completed!"}
+            visible={completed}
+            setVisible={setCompleted}
+          />
+        }
+      />
 
       <SafeAreaView
         style={{
           flex: 1,
           paddingHorizontal: 15,
           paddingTop: 10,
-          paddingBottom: 100,
+          borderWidth: 1,
         }}
       >
         <View
@@ -157,7 +380,7 @@ export default function TripDetails() {
             flexDirection: "row",
             justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: 30,
+            marginBottom: 10,
             // borderWidth: 1,
           }}
         >
@@ -206,7 +429,7 @@ export default function TripDetails() {
           <View
             style={{
               flex: 1,
-              paddingBottom: 30,
+              paddingBottom: 100,
             }}
           >
             <Text
@@ -812,79 +1035,191 @@ export default function TripDetails() {
                       justifyContent: "center",
                     }}
                   >
-                    <Pressable
-                      style={{
-                        paddingVertical: 10,
-                        paddingHorizontal: 15,
-                        backgroundColor: "#DA8913",
-                        borderRadius: 8,
-                      }}
-                    >
-                      <Text
+                    {!order.rider_id ? (
+                      <>
+                        <Pressable
+                          onPress={accepting ? () => {} : accept}
+                          style={{
+                            paddingVertical: 10,
+                            paddingHorizontal: 15,
+                            backgroundColor: "#DA8913",
+                            borderRadius: 8,
+                            opacity: accepting ? 0.5 : 1,
+                          }}
+                        >
+                          {accepting ? (
+                            <ScalingDots
+                              dotCount={3}
+                              dotSize={6}
+                              dotColor="#ffffff"
+                              speed={300}
+                              style={{
+                                marginVertical: 5,
+                              }}
+                              scaleRange={[1, 1.5]}
+                            />
+                          ) : (
+                            <Text
+                              style={{
+                                fontFamily: "HostGroteskBold",
+                                fontSize: 14,
+                                color: "#ffffff",
+                              }}
+                            >
+                              Accept Trip
+                            </Text>
+                          )}
+                        </Pressable>
+                        <Pressable
+                          onPress={() => router.back()}
+                          style={{
+                            paddingVertical: 10,
+                            paddingHorizontal: 15,
+                            backgroundColor: "#EAEAEA",
+                            borderRadius: 8,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontFamily: "HostGroteskBold",
+                              fontSize: 14,
+                            }}
+                          >
+                            Decline Trip
+                          </Text>
+                        </Pressable>
+                      </>
+                    ) : ["cancelled", "completed"].includes(
+                        order.full_status,
+                      ) ? (
+                      <></>
+                    ) : (
+                      <Pressable
+                        onPress={() => setCancel(true)}
                         style={{
-                          fontFamily: "HostGroteskBold",
-                          fontSize: 14,
-                          color: "#ffffff",
+                          paddingVertical: 10,
+                          width: "80%",
+                          backgroundColor: "#FF0000",
+                          borderRadius: 8,
                         }}
                       >
-                        Accept Trip
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => router.back()}
-                      style={{
-                        paddingVertical: 10,
-                        paddingHorizontal: 15,
-                        backgroundColor: "#EAEAEA",
-                        borderRadius: 8,
-                      }}
-                    >
-                      <Text
-                        style={{
-                          fontFamily: "HostGroteskBold",
-                          fontSize: 14,
-                        }}
-                      >
-                        Decline Trip
-                      </Text>
-                    </Pressable>
+                        <Text
+                          style={{
+                            fontFamily: "HostGroteskBold",
+                            fontSize: 14,
+                            color: "#ffffff",
+                            textAlign: "center",
+                          }}
+                        >
+                          Cancel Trip
+                        </Text>
+                      </Pressable>
+                    )}
                   </View>
                 </>
               )}
             </View>
-            {order && order.customer_latitude && order?.latitude && (
-              <View
-                style={{
-                  padding: 15,
-                  marginTop: 100,
-                  backgroundColor: "#ffffff",
-                  borderRadius: 15,
-                }}
-              >
-                <Text
-                  style={{
-                    fontFamily: "Outfit",
-                    fontSize: 18,
-                    color: "#6A6A6A",
-                  }}
-                >
-                  Map Location
-                </Text>
+            {order && order.customer_latitude && order?.pickup_latitude && (
+              <>
                 <View
                   style={{
-                    alignItems: "center",
-                    marginTop: 10,
+                    padding: 15,
+                    marginTop: 40,
+                    backgroundColor: "#ffffff",
+                    borderRadius: 15,
                   }}
                 >
-                  <Image
-                    source={require("@/assets/images/account/map.png")}
+                  <Text
                     style={{
-                      width: 380,
-                      height: 180,
+                      fontFamily: "Outfit",
+                      fontSize: 18,
+                      color: "#6A6A6A",
                     }}
-                  />
+                  >
+                    Map Location
+                  </Text>
+                  <View
+                    style={{
+                      alignItems: "center",
+                      marginTop: 10,
+                      backgroundColor: "#ffffff",
+                    }}
+                  >
+                    {/* <Image
+                      source={require("@/assets/images/account/map.png")}
+                      style={{
+                        width: 380,
+                        height: 180,
+                      }}
+                    /> */}
+                    <MapView
+                      style={{
+                        flex: 1,
+                        // borderWidth: 1,
+                        width: 380,
+                        height: 180,
+                      }}
+                      initialRegion={{
+                        latitude: order.pickup_latitude,
+                        longitude: order.pickup_longitude,
+                        latitudeDelta: 0.01,
+                        longitudeDelta: 0.01,
+                      }}
+                      customMapStyle={[
+                        {
+                          elementType: "geometry",
+                          stylers: [{ color: "#1d2c4d" }],
+                        },
+                        {
+                          elementType: "labels.text.fill",
+                          stylers: [{ color: "#8ec3b9" }],
+                        },
+                      ]}
+                    >
+                      <Marker
+                        coordinate={{
+                          latitude: order.customer_latitude,
+                          longitude: order.customer_longitude,
+                        }}
+                        pinColor="#100152"
+                        title="Customer"
+                      >
+                        <Svg
+                          width="16"
+                          height="20"
+                          viewBox="0 0 16 20"
+                          fill="none"
+                        >
+                          <Path
+                            d="M8 10C8.55 10 9.021 9.80433 9.413 9.413C9.805 9.02167 10.0007 8.55067 10 8C9.99933 7.44933 9.80367 6.97867 9.413 6.588C9.02233 6.19733 8.55133 6.00133 8 6C7.44867 5.99867 6.978 6.19467 6.588 6.588C6.198 6.98133 6.002 7.452 6 8C5.998 8.548 6.194 9.019 6.588 9.413C6.982 9.807 7.45267 10.0027 8 10ZM8 20C5.31667 17.7167 3.31267 15.596 1.988 13.638C0.663333 11.68 0.000666667 9.86733 0 8.2C0 5.7 0.804333 3.70833 2.413 2.225C4.02167 0.741667 5.884 0 8 0C10.116 0 11.9787 0.741667 13.588 2.225C15.1973 3.70833 16.0013 5.7 16 8.2C16 9.86667 15.3377 11.6793 14.013 13.638C12.6883 15.5967 10.684 17.7173 8 20Z"
+                            fill="#F32121"
+                          />
+                        </Svg>
+                        <Text style={{}}>{order.customer_address}</Text>
+                      </Marker>
+                      <Marker
+                        coordinate={{
+                          latitude: order.pickup_latitude,
+                          longitude: order.pickup_longitude,
+                        }}
+                        pinColor="#ff0000"
+                        title="Pick Up"
+                      >
+                        <SvgXml
+                          xml={locationMarker()}
+                          width={106}
+                          height={106}
+                        />
+                      </Marker>
+                      <Polyline
+                        coordinates={routeCoords}
+                        strokeWidth={3}
+                        strokeColor="blue"
+                      />
+                    </MapView>
+                  </View>
                 </View>
-              </View>
+              </>
             )}
           </View>
         </ScrollView>
@@ -899,7 +1234,12 @@ const Barge = ({ status }) => {
       style={{
         paddingVertical: 3,
         paddingHorizontal: 15,
-        backgroundColor: "#FBAF41",
+        backgroundColor:
+          status == "cancelled"
+            ? "#ff0000"
+            : status == "completed"
+              ? "#1DB954"
+              : "#FBAF41",
         borderRadius: 100,
       }}
     >
@@ -913,5 +1253,203 @@ const Barge = ({ status }) => {
         {Capitalize(status)}
       </Text>
     </View>
+  );
+};
+
+const CancelRide = ({
+  visible,
+  setVisible,
+  data,
+  setCancelled,
+}: {
+  visible: boolean;
+  setVisible: any;
+  data: any;
+  setCancelled: any;
+}) => {
+  const [cancelReason, setCancelReason] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const submit = async () => {
+    try {
+      if (cancelReason == "") return;
+
+      setSending(true);
+
+      await appService.cancelOrder(data.id, {
+        status_reason: cancelReason,
+      });
+
+      setCancelled(true);
+      setVisible(false);
+    } catch (error: any) {
+      console.log("error", error);
+
+      Toast.show({
+        type: "error",
+        text1: "Acceptance Failed",
+        text2:
+          (error.errors !== undefined && error.errors[0]
+            ? error.errors[0]
+            : error.message) || "Something went wrong",
+      });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  useEffect(() => {}, []);
+  return (
+    <Modal
+      animationType="slide" // "none" | "slide" | "fade"
+      transparent={true}
+      visible={visible}
+      onRequestClose={() => setVisible(false)}
+    >
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "rgba(0,0,0,0.5)",
+          justifyContent: "flex-end",
+          alignItems: "center",
+        }}
+      >
+        <View
+          style={{
+            height: "auto",
+            width: "100%",
+            backgroundColor: "#fff",
+            borderTopLeftRadius: 30,
+            borderTopRightRadius: 30,
+          }}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              padding: 20,
+              paddingVertical: 18,
+              gap: 30,
+            }}
+          >
+            <Pressable
+              onPress={() => setVisible(false)}
+              hitSlop={40}
+              style={{
+                height: 40,
+                width: 40,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <SvgXml xml={arrowLeft("#000000")} width={21} height={16} />
+            </Pressable>
+            <View
+              style={{
+                flexDirection: "row",
+                gap: 10,
+              }}
+            ></View>
+          </View>
+          <View style={{}}>
+            <Text
+              style={{
+                fontFamily: "HostGroteskBold",
+                fontSize: 18,
+                color: "#9F9F9F",
+                textAlign: "center",
+              }}
+            >
+              Cancel Trip?
+            </Text>
+            <Text
+              style={{
+                fontFamily: "HostGroteskBold",
+                fontSize: 13.3,
+                color: "#000000",
+                textAlign: "center",
+                marginTop: 6,
+                paddingHorizontal: 30,
+              }}
+            >
+              You are about to cancel this trip. Kindly fill in the reason for
+              cancellation below:
+            </Text>
+          </View>
+          <View
+            style={{
+              backgroundColor: "#fff",
+              width: "100%",
+              marginTop: 10,
+              paddingBottom: 30,
+              paddingTop: 15,
+              paddingHorizontal: 20,
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: "#F5F5F5",
+                padding: 10,
+                paddingHorizontal: 20,
+                borderRadius: 10,
+                height: 100,
+              }}
+            >
+              <TextInput
+                style={{
+                  color: "#000000",
+                  fontFamily: "Outfit",
+                  fontSize: 16,
+                  flex: 1,
+                }}
+                multiline={true}
+                cursorColor="#000000"
+                numberOfLines={4}
+                placeholder="Type your message..."
+                value={cancelReason}
+                onChangeText={setCancelReason}
+                textAlignVertical="top"
+              />
+            </View>
+            <Pressable
+              onPress={
+                sending || cancelReason == "" ? () => {} : () => submit()
+              }
+              style={{
+                width: "100%",
+                backgroundColor: "#ff0000",
+                paddingVertical: 20,
+                borderRadius: 12,
+                marginTop: 20,
+                opacity: sending || cancelReason == "" ? 0.5 : 1,
+              }}
+            >
+              {sending ? (
+                <ScalingDots
+                  dotCount={3}
+                  dotSize={8}
+                  dotColor="#ffffff"
+                  speed={300}
+                  style={{
+                    marginVertical: 5,
+                  }}
+                  scaleRange={[1, 1.5]}
+                />
+              ) : (
+                <Text
+                  style={{
+                    color: "#fff",
+                    textAlign: "center",
+                    fontFamily: "HostGroteskBold",
+                    fontSize: 16,
+                  }}
+                >
+                  CANCEL TRIP
+                </Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 };

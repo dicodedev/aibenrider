@@ -9,8 +9,16 @@ export const appService = {
     const res = await api.get(`/order/requests?per_page=5`);
     return res.data;
   },
-  getRequests: async () => {
-    const res = await api.get(`/order/requests`);
+  getRequests: async (filter) => {
+    const res = await api.get(
+      `/order/requests${filter ? "?type=" + filter : ""}`,
+    );
+    return res.data;
+  },
+  getCompletedRequests: async (filter) => {
+    const res = await api.get(
+      `/order/requests?status=completed${filter ? "&type=" + filter : ""}`,
+    );
     return res.data;
   },
   getCategories: async () => {
@@ -29,8 +37,22 @@ export const appService = {
     const res = await api.get(`/order/` + id);
     return res.data;
   },
+  cancelOrder: async (id, payload) => {
+    const res = await api.post(`/order/${id}/cancel_order`, payload);
+    return res.data;
+  },
   activateVehicle: async (id) => {
     const res = await api.get(`/vehicle/${id}/activate`);
+    return res.data;
+  },
+  acceptOrder: async (id) => {
+    const res = await api.get(`/order/rider/accept/${id}`);
+    return res.data;
+  },
+  updateOrder: async (id, status) => {
+    const res = await api.put(`/order/${id}/status`, {
+      status,
+    });
     return res.data;
   },
   setCurrentCordinates: async (payload) => {
@@ -47,6 +69,10 @@ export const appService = {
   },
   openChat: async (payload) => {
     const res = await api.post("chat/open", payload);
+    return res.data;
+  },
+  getAlerts: async () => {
+    const res = await api.get(`/user/notification/all`);
     return res.data;
   },
   getVehicles: async () => {

@@ -1,12 +1,23 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
+import { appService } from "@/api/appService";
 import { GlowBG } from "@/components/account/glow-bg";
 import { arrowLeft, delivery } from "@/icons";
-import { router, useNavigation } from "expo-router";
-import { useState } from "react";
+import { router, useFocusEffect, useNavigation } from "expo-router";
+import { useCallback, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path, SvgXml } from "react-native-svg";
 import { useSelector } from "react-redux";
+
+import { format } from "date-fns";
+import { NoDataFound } from "@/components/account/no-data-found";
 
 const options = [
   {
@@ -87,6 +98,7 @@ const options = [
     ),
   },
   {
+    type: "rides",
     color: "#CCD9F8",
     icon: <SvgXml xml={delivery("#1B5EB5")} width={22} height={19} />,
   },
@@ -94,10 +106,25 @@ const options = [
 
 export default function Alerts() {
   const app = useSelector((state: any) => state.app);
-  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState({});
 
   const navigation = useNavigation();
 
+  const fetchAlerts = async () => {
+    setLoading(true);
+
+    const res = await appService.getAlerts();
+    setLoading(false);
+    setData(res.data.data);
+    // console.log(res.data.data);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchAlerts();
+    }, []),
+  );
   return (
     <View style={{ flex: 1 }}>
       <GlowBG />
@@ -107,10 +134,11 @@ export default function Alerts() {
           paddingHorizontal: 10,
         }}
       >
-        <View
+        <ScrollView
           style={{
             flex: 1,
           }}
+          showsVerticalScrollIndicator={false}
         >
           <View
             style={{
@@ -144,247 +172,151 @@ export default function Alerts() {
               <SvgXml xml={arrowLeft()} width={21} height={16} />
             </Pressable>
           </View>
-
-          {/* TRANSACTIONS */}
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginTop: 0,
-              paddingHorizontal: 0,
-            }}
-          >
-            <Text
+          {loading ? (
+            <View
               style={{
-                fontSize: 18,
-                fontFamily: "HostGroteskBold",
+                flex: 1,
+                justifyContent: "center",
+                alignItems: "center",
               }}
             >
-              New
-            </Text>
-            <Pressable onPress={() => router.push("/account/category/1")}>
-              <Text
-                style={{
-                  color: "#A09F9F",
-                  fontSize: 16,
-                  fontFamily: "HostGroteskBold",
-                }}
-              ></Text>
-            </Pressable>
-          </View>
-          <ScrollView
-            contentContainerStyle={{
-              marginTop: 0,
-            }}
-          >
-            {[1, 2, 3, 4, 5].map((item, key) => (
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  paddingVertical: 10,
-                  paddingRight: 5,
-                }}
-                key={key}
-              >
+              <ActivityIndicator size="large" color="#FFDAAD" />
+            </View>
+          ) : Object.keys(data).length ? (
+            Object.keys(data).map((key) => (
+              <View key={key}>
                 <View
                   style={{
                     flexDirection: "row",
-                    gap: 20,
-                    flex: 1,
+                    justifyContent: "space-between",
                     alignItems: "center",
-                  }}
-                >
-                  <View
-                    style={{
-                      width: 48,
-                      height: 48,
-                      backgroundColor: options[key % options.length].color,
-                      borderRadius: "100%",
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
-                  >
-                    {options[key % options.length].icon}
-                  </View>
-                  <View
-                    style={{
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 12,
-                        fontFamily: "HostGroteskBold",
-                        marginBottom: 5,
-                      }}
-                    >
-                      Wallet Top-Up
-                    </Text>
-                    <Text
-                      style={{
-                        fontSize: 12,
-                        fontFamily: "HostGroteskBold",
-                        textAlign: "center",
-                        color: "#9F9F9F",
-                      }}
-                      numberOfLines={2}
-                    >
-                      Via Mastercard ****1234
-                    </Text>
-                  </View>
-                </View>
-                <View
-                  style={{
-                    justifyContent: "center",
+                    marginTop: 0,
+                    paddingHorizontal: 0,
                   }}
                 >
                   <Text
                     style={{
-                      fontSize: 12,
+                      fontSize: 18,
                       fontFamily: "HostGroteskBold",
-                      marginBottom: 3,
                     }}
                   >
-                    + ₦10,000
+                    {key}
                   </Text>
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      fontFamily: "HostGroteskBold",
-                      color: "#9F9F9F",
-                    }}
-                  >
-                    Today, 2:45 PM
-                  </Text>
+                  <Pressable onPress={() => router.push("/account/category/1")}>
+                    <Text
+                      style={{
+                        color: "#A09F9F",
+                        fontSize: 16,
+                        fontFamily: "HostGroteskBold",
+                      }}
+                    ></Text>
+                  </Pressable>
                 </View>
+                {data[key].map((item, key) => (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      paddingVertical: 10,
+                      paddingRight: 5,
+                      width: "100%",
+                    }}
+                    key={key}
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        gap: 20,
+                        flex: 1,
+                        alignItems: "center",
+                      }}
+                    >
+                      {getIcon(item.data.data.icon ?? "rides")}
+                      <View
+                        style={{
+                          justifyContent: "center",
+                          flex: 1,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontFamily: "HostGroteskBold",
+                            marginBottom: 5,
+                          }}
+                        >
+                          {item.data.title}
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontFamily: "HostGroteskBold",
+                            color: "#9F9F9F",
+                            width: "100%",
+                          }}
+                          numberOfLines={2}
+                        >
+                          {item.data.body}
+                        </Text>
+                      </View>
+                    </View>
+                    <View
+                      style={{
+                        justifyContent: "flex-end",
+                        width: 60,
+                        // borderWidth: 1,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontFamily: "HostGroteskBold",
+                          marginBottom: 5,
+                        }}
+                      >
+                        {/* + ₦10,000 */}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontFamily: "HostGroteskBold",
+                          textAlign: "right",
+                          color: "#808080",
+                        }}
+                      >
+                        {format(item.created_at, "h:mm a")}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
               </View>
-            ))}
-          </ScrollView>
-
-          {/* TRANSACTIONS */}
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginTop: 20,
-              paddingHorizontal: 0,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 18,
-                fontFamily: "HostGroteskBold",
-              }}
-            >
-              Today
-            </Text>
-            <Pressable onPress={() => router.push("/account/category/1")}>
-              <Text
-                style={{
-                  color: "#A09F9F",
-                  fontSize: 16,
-                  fontFamily: "HostGroteskBold",
-                }}
-              ></Text>
-            </Pressable>
-          </View>
-          <ScrollView
-            contentContainerStyle={{
-              marginTop: 0,
-            }}
-          >
-            {[1, 2, 3, 4, 5].map((item, key) => (
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  paddingVertical: 10,
-                  paddingRight: 5,
-                }}
-                key={key}
-              >
-                <View
-                  style={{
-                    flexDirection: "row",
-                    gap: 20,
-                    flex: 1,
-                    alignItems: "center",
-                  }}
-                >
-                  <View
-                    style={{
-                      width: 48,
-                      height: 48,
-                      backgroundColor: options[key % options.length].color,
-                      borderRadius: "100%",
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
-                  >
-                    {options[key % options.length].icon}
-                  </View>
-                  <View
-                    style={{
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 12,
-                        fontFamily: "HostGroteskBold",
-                        marginBottom: 5,
-                      }}
-                    >
-                      Wallet Top-Up
-                    </Text>
-                    <Text
-                      style={{
-                        fontSize: 12,
-                        fontFamily: "HostGroteskBold",
-                        textAlign: "center",
-                        color: "#9F9F9F",
-                      }}
-                      numberOfLines={2}
-                    >
-                      Via Mastercard ****1234
-                    </Text>
-                  </View>
-                </View>
-                <View
-                  style={{
-                    justifyContent: "center",
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      fontFamily: "HostGroteskBold",
-                      marginBottom: 3,
-                    }}
-                  >
-                    + ₦10,000
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      fontFamily: "HostGroteskBold",
-                      color: "#9F9F9F",
-                    }}
-                  >
-                    Today, 2:45 PM
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
+            ))
+          ) : (
+            <NoDataFound text="You have no alerts" />
+          )}
+        </ScrollView>
       </SafeAreaView>
     </View>
   );
 }
+
+const getIcon = (type: string) => {
+  const target = options.find((i) => i.type == type);
+  return (
+    <View
+      style={{
+        width: 48,
+        height: 48,
+        backgroundColor: target?.color,
+        borderRadius: "100%",
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      {target?.icon}
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   headerContainer: {

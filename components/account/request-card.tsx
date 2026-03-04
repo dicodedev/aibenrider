@@ -3,8 +3,12 @@ import { Skeleton } from "moti/skeleton";
 import { Image, Pressable, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
+import { appService } from "@/api/appService";
 import ProfilePicture from "@/assets/images/account/profile-picture.png";
 import { requestCardConfig } from "@/constants/app";
+import { useState } from "react";
+import Toast from "react-native-toast-message";
+import ScalingDots from "../scaling-dots";
 
 export const RequestCard = ({
   data,
@@ -15,6 +19,32 @@ export const RequestCard = ({
   loading: boolean;
   completed: boolean;
 }) => {
+  const [sending, setSending] = useState(false);
+  const [accepted, setAccepted] = useState(data.rider_id ? true : false);
+
+  const accept = async () => {
+    try {
+      setSending(true);
+
+      await appService.acceptOrder(data.id);
+
+      setAccepted(true);
+    } catch (error: any) {
+      console.log("error", error);
+
+      Toast.show({
+        type: "error",
+        text1: "Acceptance Failed",
+        text2:
+          (error.errors !== undefined && error.errors[0]
+            ? error.errors[0]
+            : error.message) || "Something went wrong",
+      });
+    } finally {
+      setSending(false);
+    }
+  };
+
   return (
     <Pressable
       onPress={
@@ -202,26 +232,67 @@ export const RequestCard = ({
         {loading ? (
           <Skeleton colorMode="light" height={40} width={100} radius={8} />
         ) : !completed ? (
-          <Pressable
-            onPress={() => {}}
-            style={{
-              borderRadius: 8,
-              backgroundColor: requestCardConfig[data.type].background,
-              padding: 7,
-              paddingHorizontal: 15,
-            }}
-          >
-            <Text
+          accepted || data.rider_id ? (
+            <View
               style={{
-                fontSize: 12,
-                fontFamily: "HostGroteskBold",
-                color: "#F5F5F5",
-                textAlign: "center",
+                borderRadius: 8,
+                backgroundColor:
+                  data.full_status == "cancelled"
+                    ? "#ffb3b3"
+                    : requestCardConfig[data.type].transparentBackground,
+                padding: 7,
+                paddingHorizontal: 15,
               }}
             >
-              Accept {requestCardConfig[data.type].text}
-            </Text>
-          </Pressable>
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontFamily: "HostGroteskBold",
+                  color:
+                    data.full_status == "cancelled"
+                      ? "#ff0000"
+                      : requestCardConfig[data.type].color,
+                  textAlign: "center",
+                }}
+              >
+                {data.full_status == "cancelled" ? "Cancelled" : "Accepted"}
+              </Text>
+            </View>
+          ) : (
+            <Pressable
+              onPress={accept}
+              style={{
+                borderRadius: 8,
+                backgroundColor: requestCardConfig[data.type].background,
+                padding: 7,
+                paddingHorizontal: 15,
+              }}
+            >
+              {sending ? (
+                <ScalingDots
+                  dotCount={3}
+                  dotSize={6}
+                  dotColor="#ffffff"
+                  speed={300}
+                  style={{
+                    marginVertical: 5,
+                  }}
+                  scaleRange={[1, 1.5]}
+                />
+              ) : (
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontFamily: "HostGroteskBold",
+                    color: "#F5F5F5",
+                    textAlign: "center",
+                  }}
+                >
+                  Accept {requestCardConfig[data.type].text}
+                </Text>
+              )}
+            </Pressable>
+          )
         ) : (
           <View>
             <Text
@@ -229,7 +300,7 @@ export const RequestCard = ({
                 fontSize: 12,
                 fontFamily: "HostGroteskBold",
                 color: "#9F9F9F",
-                textAlign: "left",
+                textAlign: "right",
               }}
             >
               Completed

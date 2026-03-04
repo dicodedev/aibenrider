@@ -88,6 +88,8 @@ export default function AccountLayout() {
     registerForPushNotifications();
   }, []);
 
+  console.log("cords", coords);
+
   useEffect(() => {
     const setCordinates = async () => {
       await appService.setCurrentCordinates({
@@ -96,7 +98,7 @@ export default function AccountLayout() {
       });
     };
     coords && setCordinates();
-  }, [coords]);
+  }, [address]);
 
   useEffect(() => {
     if (!app.pushToken) return;

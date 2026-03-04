@@ -31,11 +31,12 @@ export const Chat = ({
   const [text, setText] = useState("");
   const [messages, setMessages] = useState(data);
 
-  console.log("m", messages);
+  // console.log("m", messages);
 
   const role = user.roles[0].name;
 
   const socketRef = useRef(null);
+  const scrollViewRef = useRef(null);
 
   useEffect(() => {
     const socket = new WebSocket("wss://socket.aibenmart.com/ws");
@@ -55,8 +56,8 @@ export const Chat = ({
       const data = JSON.parse(event.data);
       console.log("data", data);
 
-      if (data.type == "messaged") {
-        setMessages([...messages, data.data.data]);
+      if (["messaged", "newMessage"].includes(data.type)) {
+        setMessages((prev) => [...prev, data.data.data]);
       }
     };
 
@@ -89,6 +90,10 @@ export const Chat = ({
 
     setText("");
   };
+
+  useEffect(() => {
+    scrollViewRef.current?.scrollToEnd({ animated: true });
+  }, [messages]);
   return (
     <Modal
       animationType="slide" // "none" | "slide" | "fade"
@@ -190,10 +195,17 @@ export const Chat = ({
               flex: 1,
               backgroundColor: "#F5F5F5",
             }}
+            ref={scrollViewRef}
+            onLayout={() =>
+              scrollViewRef.current?.scrollToEnd({ animated: false })
+            }
+            onContentSizeChange={() =>
+              scrollViewRef.current?.scrollToEnd({ animated: true })
+            }
           >
             <View
               style={{
-                gap: 20,
+                gap: 8,
                 padding: 25,
               }}
             >
@@ -239,7 +251,7 @@ export const Chat = ({
                         fontSize: 16,
                       }}
                     >
-                     {item.message}
+                      {item.message}
                     </Text>
                   </View>
                 ),
