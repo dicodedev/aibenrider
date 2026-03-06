@@ -1,19 +1,76 @@
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Share, Text, View } from "react-native";
 
 import { GlowBG } from "@/components/account/glow-bg";
 import { arrowLeft } from "@/icons";
 import { router, useNavigation } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path, SvgXml } from "react-native-svg";
+import Toast from "react-native-toast-message";
 import { useSelector } from "react-redux";
+
+import { appService } from "@/api/appService";
+import { NoDataFound } from "@/components/account/no-data-found";
+import * as Clipboard from "expo-clipboard";
+import { Skeleton } from "moti/skeleton";
+
+import ProfilePicture from "@/assets/images/account/profile-picture.png";
+import { format } from "date-fns";
+
+const options = ["Referrals", "Total Commissions"];
 
 export default function Index() {
   const app = useSelector((state: any) => state.app);
-  const [search, setSearch] = useState("");
+  const user = app.user;
+
+  // console.log("code", app?.user?.ref_code);
+
+  const [referrals, setReferrals] = useState(null);
+
+  const [stats, setStats] = useState(null);
+
+  const fetchStats = async () => {
+    const res = await appService.getReferralStats();
+    console.log("stats", res);
+    setStats(res);
+  };
+
+  const fetchReferrals = async () => {
+    const res = await appService.getSomeReferrals();
+
+    setReferrals(res.data);
+  };
+
+  useEffect(() => {
+    fetchReferrals();
+    fetchStats();
+  }, []);
 
   const navigation = useNavigation();
+
+  const shareLink = async () => {
+    try {
+      await Share.share({
+        message:
+          "Join AibenMart Today https://aibenmart.com/download?ref=" +
+          user?.ref_code,
+        // url: "https://aibenmart.com",
+        title: "Share Link",
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const copyToClipboard = async () => {
+    await Clipboard.setStringAsync(user?.ref_code);
+    Toast.show({
+      type: "success",
+      text1: "Copied!",
+      text2: "Copied referal code to clipboard",
+    });
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -65,6 +122,7 @@ export default function Index() {
           <View
             style={{
               marginTop: 20,
+              marginBottom: 50,
             }}
           >
             <View>
@@ -75,7 +133,7 @@ export default function Index() {
                   marginBottom: 6,
                 }}
               >
-                Refer Drivers. Earn Commissions.
+                Refer Friends & Earn
               </Text>
               <Text
                 style={{
@@ -84,7 +142,8 @@ export default function Index() {
                   color: "#686868",
                 }}
               >
-                Earn when drivers you invite complete trips on the paltform.
+                Invite friends to sign up and get rewarded for each of thier
+                transactions.
               </Text>
             </View>
             <View
@@ -127,9 +186,10 @@ export default function Index() {
                     fontFamily: "HostGrotesk",
                   }}
                 >
-                  aibenmart/john1234
+                  {user?.ref_code}
                 </Text>
-                <View
+                <Pressable
+                  onPress={copyToClipboard}
                   style={{
                     flexDirection: "row",
                     gap: 5,
@@ -151,16 +211,16 @@ export default function Index() {
                       fill="black"
                     />
                   </Svg>
-                </View>
+                </Pressable>
               </View>
               <Pressable
-                onPress={() => {}}
+                onPress={shareLink}
                 style={{
                   width: "100%",
                   backgroundColor: "#100152",
                   paddingVertical: 14,
                   borderRadius: 10,
-                  marginTop: 15,
+                  marginTop: 10,
                 }}
               >
                 <Text
@@ -174,75 +234,105 @@ export default function Index() {
                   SHARE
                 </Text>
               </Pressable>
-              <Text
-                style={{
-                  fontSize: 12,
-                  fontFamily: "HostGrotesk",
-                  color: "#686868",
-                  marginTop: 13,
-                }}
-              >
-                Referral earnings are paid directly into your wallet and can be
-                withdrawn.
-              </Text>
             </View>
             <View
               style={{
-                backgroundColor: "#fff",
-                marginTop: 20,
-                paddingVertical: 16,
-                paddingHorizontal: 20,
-                borderRadius: 10,
-                flexDirection: "row",
-                gap: 10,
+                flexDirection: "column",
               }}
             >
-              <View
-                style={{
-                  width: 50,
-                  height: 50,
-                  backgroundColor: "#FFE9CE",
-                  borderRadius: "100%",
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-              >
-                <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <Path
-                    d="M12.6869 1.34782L15.1963 7.07137C15.2908 7.28673 15.4413 7.47282 15.6321 7.61022C15.823 7.74762 16.0472 7.83129 16.2814 7.85253L22.3946 8.40065C23.0863 8.50132 23.3622 9.3496 22.8607 9.83806L18.2557 13.7066C17.8829 14.0198 17.7132 14.512 17.8158 14.9874L19.1544 21.2534C19.2718 21.9414 18.5503 22.4671 17.9313 22.1409L12.5956 19.0162C12.3944 18.8981 12.1652 18.8358 11.9319 18.8358C11.6985 18.8358 11.4694 18.8981 11.2682 19.0162L5.9324 22.139C5.31531 22.4634 4.59194 21.9395 4.70939 21.2516L6.04799 14.9855C6.14867 14.5101 5.98088 14.0179 5.60801 13.7047L1.00121 9.83992C0.501563 9.35333 0.777486 8.50318 1.46729 8.40251L7.58049 7.85439C7.81469 7.83316 8.03891 7.74948 8.22976 7.61208C8.42061 7.47468 8.5711 7.2886 8.66554 7.07323L11.1749 1.34969C11.4863 0.723267 12.3775 0.723267 12.6869 1.34782Z"
-                    fill="#FBAF41"
-                  />
-                  <Path
-                    d="M12.4991 7.41457L12.074 3.19742C12.0573 2.96251 12.0088 2.55981 12.3854 2.55981C12.6837 2.55981 12.8459 3.18064 12.8459 3.18064L14.1211 6.5663C14.6021 7.85456 14.4045 8.29641 13.9402 8.55742C13.407 8.85572 12.6203 8.62267 12.4991 7.41457Z"
-                    fill="#FFFF8D"
-                  />
-                  <Path
-                    d="M17.7596 13.3319L21.4174 10.4776C21.5983 10.3266 21.9245 10.0861 21.6635 9.81203C21.4566 9.59577 20.8973 9.90711 20.8973 9.90711L17.6962 11.1581C16.7416 11.4881 16.1078 11.9765 16.0518 12.5918C15.9791 13.4121 16.7155 14.0441 17.7596 13.3319Z"
-                    fill="#F4B400"
-                  />
-                </Svg>
-              </View>
-              <View>
-                <Text
+              {options.map((item, key) => (
+                <View
+                  key={key}
                   style={{
-                    fontSize: 12,
-                    fontFamily: "HostGrotesk",
-                    marginBottom: 4,
+                    backgroundColor: "#fff",
+                    marginTop: 20,
+                    paddingVertical: 16,
+                    paddingHorizontal: 20,
+                    borderRadius: 10,
+                    flexDirection: "row",
+                    gap: 10,
                   }}
                 >
-                  Total Commissions
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 18,
-                    fontFamily: "HostGroteskBold",
-                  }}
-                >
-                  ₦20,000
-                </Text>
-              </View>
+                  <View
+                    style={{
+                      width: 50,
+                      height: 50,
+                      backgroundColor: "#FFE9CE",
+                      borderRadius: "100%",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    {key ? (
+                      <Text
+                        style={{
+                          fontSize: 20,
+                          fontFamily: "HostGroteskBold",
+                          textAlign: "center",
+                          color: "#F4B400",
+                        }}
+                      >
+                        ₦
+                      </Text>
+                    ) : (
+                      <Svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <Path
+                          d="M12.6869 1.34782L15.1963 7.07137C15.2908 7.28673 15.4413 7.47282 15.6321 7.61022C15.823 7.74762 16.0472 7.83129 16.2814 7.85253L22.3946 8.40065C23.0863 8.50132 23.3622 9.3496 22.8607 9.83806L18.2557 13.7066C17.8829 14.0198 17.7132 14.512 17.8158 14.9874L19.1544 21.2534C19.2718 21.9414 18.5503 22.4671 17.9313 22.1409L12.5956 19.0162C12.3944 18.8981 12.1652 18.8358 11.9319 18.8358C11.6985 18.8358 11.4694 18.8981 11.2682 19.0162L5.9324 22.139C5.31531 22.4634 4.59194 21.9395 4.70939 21.2516L6.04799 14.9855C6.14867 14.5101 5.98088 14.0179 5.60801 13.7047L1.00121 9.83992C0.501563 9.35333 0.777486 8.50318 1.46729 8.40251L7.58049 7.85439C7.81469 7.83316 8.03891 7.74948 8.22976 7.61208C8.42061 7.47468 8.5711 7.2886 8.66554 7.07323L11.1749 1.34969C11.4863 0.723267 12.3775 0.723267 12.6869 1.34782Z"
+                          fill="#FBAF41"
+                        />
+                        <Path
+                          d="M12.4991 7.41457L12.074 3.19742C12.0573 2.96251 12.0088 2.55981 12.3854 2.55981C12.6837 2.55981 12.8459 3.18064 12.8459 3.18064L14.1211 6.5663C14.6021 7.85456 14.4045 8.29641 13.9402 8.55742C13.407 8.85572 12.6203 8.62267 12.4991 7.41457Z"
+                          fill="#FFFF8D"
+                        />
+                        <Path
+                          d="M17.7596 13.3319L21.4174 10.4776C21.5983 10.3266 21.9245 10.0861 21.6635 9.81203C21.4566 9.59577 20.8973 9.90711 20.8973 9.90711L17.6962 11.1581C16.7416 11.4881 16.1078 11.9765 16.0518 12.5918C15.9791 13.4121 16.7155 14.0441 17.7596 13.3319Z"
+                          fill="#F4B400"
+                        />
+                      </Svg>
+                    )}
+                  </View>
+                  <View>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontFamily: "HostGrotesk",
+                        marginBottom: 2,
+                      }}
+                    >
+                      {item}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 18,
+                        fontFamily: "HostGroteskBold",
+                      }}
+                    >
+                      {stats ? (
+                        !key ? (
+                          stats.referals
+                        ) : (
+                          "₦ " + stats.earnings
+                        )
+                      ) : (
+                        <Skeleton
+                          colorMode="light"
+                          height={14}
+                          width={100}
+                          radius={3}
+                        />
+                      )}
+                    </Text>
+                  </View>
+                </View>
+              ))}
             </View>
-            {/* EARNINGS */}
+
+         
             <View
               style={{
                 flexDirection: "row",
@@ -258,88 +348,195 @@ export default function Index() {
                   fontFamily: "HostGroteskBold",
                 }}
               >
-                Earnings
+                Referrals
               </Text>
-              <Pressable
-                onPress={() => router.push("/account/promotions/earnings")}
-              >
-                <Text
-                  style={{
-                    color: "#A09F9F",
-                    fontSize: 16,
-                    fontFamily: "HostGroteskBold",
-                  }}
+              {referrals && referrals.length && (
+                <Pressable
+                  onPress={() => router.push("/account/promotions/earnings")}
                 >
-                  See All
-                </Text>
-              </Pressable>
-            </View>
-            <ScrollView
-              contentContainerStyle={{
-                marginTop: 15,
-                marginBottom: 30,
-              }}
-            >
-              {[1, 2, 3, 4, 5].map((item, key) => (
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    paddingVertical: 10,
-                    paddingRight: 20,
-                    // backgroundColor: "#fff",
-                    paddingHorizontal: 10,
-                    marginBottom: 10,
-                    borderRadius: 12,
-                 
-                  }}
-                  key={key}
-                >
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      gap: 20,
-                    }}
-                  >
-                    <Image
-                      source={{ uri: "https://avatar.iran.liara.run/public" }}
-                      style={{
-                        width: 45,
-                        height: 45,
-                        borderRadius: 100,
-                      }}
-                    />
-                    <View>
-                      <Text
-                        style={{
-                          fontSize: 16,
-                          fontFamily: "HostGroteskBold",
-                        }}
-                      >
-                        Elohor Sunday
-                      </Text>
-                      <Text
-                        style={{
-                          color: "#686868",
-                          fontSize: 12,
-                          fontFamily: "HostGroteskBold",
-                        }}
-                      >
-                        Signed Up Commission
-                      </Text>
-                    </View>
-                  </View>
                   <Text
                     style={{
-                      fontSize: 14,
+                      color: "#A09F9F",
+                      fontSize: 16,
                       fontFamily: "HostGroteskBold",
                     }}
                   >
-                    ₦500 Earned 🎉
+                    See All
                   </Text>
-                </View>
-              ))}
-            </ScrollView>
+                </Pressable>
+              )}
+            </View>
+            <View
+              style={{
+                marginTop: 15,
+              }}
+            >
+              {referrals ? (
+                referrals.length ? (
+                  referrals.map((item, key) => (
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        paddingVertical: 10,
+                        paddingRight: 20,
+                        backgroundColor: "#fff",
+                        paddingHorizontal: 10,
+                        marginBottom: 10,
+                        borderRadius: 12,
+                        alignItems: "center",
+                      }}
+                      key={key}
+                    >
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          gap: 20,
+                        }}
+                      >
+                        <View
+                          style={{
+                            width: 50,
+                            height: 50,
+                            backgroundColor: "#FFE9CE",
+                            borderRadius: "100%",
+                            justifyContent: "center",
+                            alignItems: "center",
+                          }}
+                        >
+                          <Image
+                            source={
+                              item
+                                ? item?.picture != "null"
+                                  ? { uri: item?.picture }
+                                  : ProfilePicture
+                                : ProfilePicture
+                            }
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              borderRadius: 100,
+                            }}
+                          />
+                        </View>
+                        <View>
+                          <Text
+                            style={{
+                              fontSize: 16,
+                              fontFamily: "HostGroteskBold",
+                              marginBottom: 3,
+                            }}
+                          >
+                            {item.name}
+                          </Text>
+                          <Text
+                            style={{
+                              color: "#686868",
+                              fontSize: 12,
+                              fontFamily: "HostGroteskBold",
+                            }}
+                          >
+                            Joined on{" "}
+                            {format(
+                              new Date(item.created_at),
+                              "do 'of' MMMM, yyyy",
+                            )}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          fontFamily: "HostGroteskBold",
+                        }}
+                      >
+                        {item.orders_count} Orders
+                      </Text>
+                    </View>
+                  ))
+                ) : (
+                  <NoDataFound text={"No referral found"} />
+                )
+              ) : (
+                [1, 2, 3, 4, 5].map((item, key) => (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      paddingVertical: 10,
+                      paddingRight: 20,
+                      backgroundColor: "#fff",
+                      paddingHorizontal: 10,
+                      marginBottom: 10,
+                      borderRadius: 12,
+                      alignItems: "center",
+                    }}
+                    key={key}
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        gap: 20,
+                        flex: 1,
+                      }}
+                    >
+                      <Skeleton
+                        colorMode="light"
+                        height={50}
+                        width={50}
+                        radius={100}
+                      />
+                      <View>
+                        <Text
+                          style={{
+                            fontSize: 16,
+                            fontFamily: "HostGroteskBold",
+                            marginTop: 6,
+                          }}
+                        >
+                          <Skeleton
+                            colorMode="light"
+                            height={12}
+                            width={120}
+                            radius={3}
+                          />
+                        </Text>
+                        <Text
+                          style={{
+                            color: "#686868",
+                            fontSize: 12,
+                            fontFamily: "HostGroteskBold",
+                            marginTop: 10,
+                          }}
+                        >
+                          <Skeleton
+                            colorMode="light"
+                            height={12}
+                            width={180}
+                            radius={3}
+                          />
+                        </Text>
+                      </View>
+                    </View>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontFamily: "HostGroteskBold",
+                        width: 80,
+                        paddingLeft: 10,
+                      }}
+                    >
+                      <Skeleton
+                        colorMode="light"
+                        height={12}
+                        width={60}
+                        radius={4}
+                      />
+                    </Text>
+                  </View>
+                ))
+              )}
+            </View>
           </View>
         </ScrollView>
       </SafeAreaView>

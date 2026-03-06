@@ -4,12 +4,19 @@ import { GlowBG } from "@/components/account/glow-bg";
 import { Menu } from "@/components/account/menu";
 import { delivery } from "@/icons";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path, SvgXml } from "react-native-svg";
 import { useSelector } from "react-redux";
 
 const colors = ["#FFE4C3", "#E0FAD5", "#FFD0DA", "#D4E0FF"];
+
+import { appService } from "@/api/appService";
+import ProfilePicture from "@/assets/images/account/profile-picture.png";
+import { NoDataFound } from "@/components/account/no-data-found";
+import { Capitalize } from "@/utils/helper";
+import { format, isToday } from "date-fns";
+import { Skeleton } from "moti/skeleton";
 
 const options = [
   {
@@ -97,8 +104,40 @@ const options = [
 
 export default function Wallet() {
   const app = useSelector((state: any) => state.app);
+  const user = app.user;
   const [search, setSearch] = useState("");
 
+  const [transactions, setTransactions] = useState(null);
+
+  const [stats, setStats] = useState(null);
+
+  const fetchStats = async () => {
+    const res = await appService.getTransactionStats();
+    console.log("stats", res);
+    setStats(res);
+  };
+
+  const fetchTransactions = async () => {
+    const res = await appService.getSomeTransactions();
+
+    console.log("res data", res.data);
+    setTransactions(res.data);
+  };
+
+  const formatMessageDate = (date) => {
+    const d = new Date(date);
+
+    if (isToday(d)) {
+      return `Today, ${format(d, "h:mm a")}`;
+    }
+
+    return format(d, "MMM d, h:mm a");
+  };
+
+  useEffect(() => {
+    fetchTransactions();
+    fetchStats();
+  }, []);
   return (
     <View style={{ flex: 1 }}>
       <GlowBG />
@@ -132,7 +171,13 @@ export default function Wallet() {
             >
               <Menu />
               <Image
-                source={{ uri: "https://avatar.iran.liara.run/public" }}
+                source={
+                  user
+                    ? user?.picture && user?.picture != "null"
+                      ? { uri: user?.picture }
+                      : ProfilePicture
+                    : ProfilePicture
+                }
                 style={{
                   width: 51,
                   height: 51,
@@ -157,11 +202,11 @@ export default function Wallet() {
                   textAlign: "center",
                 }}
               >
-                ₦ 10,000
+                ₦ {Number(user.wallet_balance).toLocaleString()}
               </Text>
             </View>
           </View>
-          <View
+          {/* <View
             style={{
               paddingHorizontal: 10,
             }}
@@ -198,7 +243,7 @@ export default function Wallet() {
                 WITHDRAW
               </Text>
             </Pressable>
-          </View>
+          </View> */}
 
           <View
             style={{
@@ -228,7 +273,16 @@ export default function Wallet() {
                     fontSize: 23,
                   }}
                 >
-                  N500
+                  {stats ? (
+                    "₦" + stats.total_earnings
+                  ) : (
+                    <Skeleton
+                      colorMode="light"
+                      height={20}
+                      width={100}
+                      radius={3}
+                    />
+                  )}
                 </Text>
                 <Text
                   style={{
@@ -237,7 +291,7 @@ export default function Wallet() {
                     color: "#8C8C8C",
                   }}
                 >
-                  Today Earnings
+                  Total Earnings
                 </Text>
               </View>
               <View
@@ -255,7 +309,16 @@ export default function Wallet() {
                     fontSize: 23,
                   }}
                 >
-                  50
+                  {stats ? (
+                    stats.trips
+                  ) : (
+                    <Skeleton
+                      colorMode="light"
+                      height={20}
+                      width={100}
+                      radius={3}
+                    />
+                  )}
                 </Text>
                 <Text
                   style={{
@@ -276,16 +339,23 @@ export default function Wallet() {
               >
                 <Text
                   style={{
-             
                     fontFamily: "HostGroteskBold",
                     fontSize: 23,
                   }}
                 >
-                  4km
+                  {stats ? (
+                    stats.distance_covered + " km"
+                  ) : (
+                    <Skeleton
+                      colorMode="light"
+                      height={20}
+                      width={100}
+                      radius={3}
+                    />
+                  )}
                 </Text>
                 <Text
                   style={{
-                   
                     fontFamily: "HostGrotesk",
                     fontSize: 13,
                     color: "#8C8C8C",
@@ -303,7 +373,7 @@ export default function Wallet() {
               flexDirection: "row",
               justifyContent: "space-between",
               alignItems: "center",
-              marginTop: 30,
+              marginTop: 40,
               paddingHorizontal: 15,
             }}
           >
@@ -315,110 +385,226 @@ export default function Wallet() {
             >
               Transactions
             </Text>
-            <Pressable
-              onPress={() => router.push("/account/wallet/transactions")}
-            >
-              <Text
-                style={{
-                  color: "#A09F9F",
-                  fontSize: 16,
-                  fontFamily: "HostGroteskBold",
-                }}
+            {transactions && transactions.length && (
+              <Pressable
+                onPress={() => router.push("/account/wallet/transactions")}
               >
-                See All
-              </Text>
-            </Pressable>
+                <Text
+                  style={{
+                    color: "#A09F9F",
+                    fontSize: 16,
+                    fontFamily: "HostGroteskBold",
+                  }}
+                >
+                  See All
+                </Text>
+              </Pressable>
+            )}
           </View>
-          <ScrollView
-            contentContainerStyle={{
+          <View
+            style={{
               marginTop: 15,
               paddingLeft: 15,
             }}
           >
-            {[1, 2, 3, 4, 5].map((item, key) => (
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  paddingVertical: 10,
-                  paddingRight: 20,
-                }}
-                key={key}
-              >
+            {transactions ? (
+              transactions.length ? (
+                transactions.map((item, key) => (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      paddingVertical: 10,
+                      paddingRight: 20,
+                      flex: 1,
+                    }}
+                    key={key}
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        gap: 15,
+                        flex: 1,
+                        alignItems: "center",
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 48,
+                          height: 48,
+                          backgroundColor: options[key % options.length].color,
+                          borderRadius: "100%",
+                          justifyContent: "center",
+                          alignItems: "center",
+                        }}
+                      >
+                        {options[key % options.length].icon}
+                      </View>
+                      <View
+                        style={{
+                          justifyContent: "center",
+                          flex: 1,
+                          // borderWidth: 1,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontFamily: "HostGroteskBold",
+                            marginBottom: 2,
+                            flex: 1,
+                            width: "100%",
+                          }}
+                        >
+                          {Capitalize(item.type.replaceAll(["_", "-"], " "))}
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontFamily: "HostGroteskBold",
+
+                            color: "#9F9F9F",
+                            flex: 1,
+                            width: "100%",
+                          }}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {item.description}
+                        </Text>
+                      </View>
+                    </View>
+                    <View
+                      style={{
+                        justifyContent: "center",
+                        width: 100,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontFamily: "HostGroteskBold",
+                          marginBottom: 3,
+                        }}
+                      >
+                        + ₦{Number(item.amount).toLocaleString()}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontFamily: "HostGroteskBold",
+                          color: "#9F9F9F",
+                        }}
+                      >
+                        {formatMessageDate(item.created_at)}
+                      </Text>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <NoDataFound text={"No Transaction Found"} />
+              )
+            ) : (
+              [1, 2, 3, 4, 5].map((item, key) => (
                 <View
                   style={{
                     flexDirection: "row",
-                    gap: 20,
-                    flex: 1,
-                    alignItems: "center",
+                    justifyContent: "space-between",
+                    paddingVertical: 10,
+                    paddingRight: 20,
                   }}
+                  key={key}
                 >
                   <View
                     style={{
-                      width: 48,
-                      height: 48,
-                      backgroundColor: options[key % options.length].color,
-                      borderRadius: "100%",
-                      justifyContent: "center",
+                      flexDirection: "row",
+                      gap: 20,
+                      flex: 1,
                       alignItems: "center",
                     }}
                   >
-                    {options[key % options.length].icon}
+                    <Skeleton
+                      colorMode="light"
+                      height={48}
+                      width={48}
+                      radius={100}
+                    />
+                    <View
+                      style={{
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontFamily: "HostGroteskBold",
+                          marginBottom: 5,
+                        }}
+                      >
+                        <Skeleton
+                          colorMode="light"
+                          height={10}
+                          width={100}
+                          radius={3}
+                        />
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontFamily: "HostGroteskBold",
+                          textAlign: "center",
+                          color: "#9F9F9F",
+                        }}
+                        numberOfLines={2}
+                      >
+                        <Skeleton
+                          colorMode="light"
+                          height={10}
+                          width={150}
+                          radius={3}
+                        />
+                      </Text>
+                    </View>
                   </View>
                   <View
                     style={{
                       justifyContent: "center",
+                      width: 100,
                     }}
                   >
                     <Text
                       style={{
                         fontSize: 12,
                         fontFamily: "HostGroteskBold",
-                        marginBottom: 5,
+                        marginBottom: 6,
                       }}
                     >
-                      Wallet Top-Up
+                      <Skeleton
+                        colorMode="light"
+                        height={10}
+                        width={100}
+                        radius={3}
+                      />
                     </Text>
                     <Text
                       style={{
                         fontSize: 12,
                         fontFamily: "HostGroteskBold",
-                        textAlign: "center",
                         color: "#9F9F9F",
                       }}
-                      numberOfLines={2}
                     >
-                      Via Mastercard ****1234
+                      <Skeleton
+                        colorMode="light"
+                        height={10}
+                        width={100}
+                        radius={3}
+                      />
                     </Text>
                   </View>
                 </View>
-                <View
-                  style={{
-                    justifyContent: "center",
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      fontFamily: "HostGroteskBold",
-                      marginBottom: 3,
-                    }}
-                  >
-                    + ₦10,000
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      fontFamily: "HostGroteskBold",
-                      color: "#9F9F9F",
-                    }}
-                  >
-                    Today, 2:45 PM
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </ScrollView>
+              ))
+            )}
+          </View>
         </ScrollView>
       </SafeAreaView>
     </View>

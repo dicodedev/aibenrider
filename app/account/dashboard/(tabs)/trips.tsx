@@ -1,4 +1,11 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import { appService } from "@/api/appService";
 import { GlowBG } from "@/components/account/glow-bg";
@@ -7,7 +14,7 @@ import { RequestCard } from "@/components/account/request-card";
 import { requestCardConfig } from "@/constants/app";
 import { arrowLeft } from "@/icons";
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path, SvgXml } from "react-native-svg";
 import { useSelector } from "react-redux";
@@ -30,8 +37,7 @@ export default function Trips() {
         }}
         edges={["left", "right", "top"]}
       >
-        <ScrollView
-          showsVerticalScrollIndicator={false}
+        <View
           style={{
             flex: 1,
           }}
@@ -231,7 +237,7 @@ export default function Trips() {
             style={{
               flexDirection: "row",
               gap: 30,
-              marginBottom: 20,
+              marginBottom: 5,
               marginTop: 10,
             }}
           >
@@ -265,7 +271,7 @@ export default function Trips() {
           ) : (
             <Pending filter={selected ? selected.text.toLowerCase() : null} />
           )}
-        </ScrollView>
+        </View>
       </SafeAreaView>
     </View>
   );
@@ -274,32 +280,86 @@ export default function Trips() {
 const Pending = ({ filter }: { filter: string }) => {
   const [requests, setRequests] = useState(null);
 
-  const fetchRequests = async () => {
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [canLoad, setCanLoad] = useState(false);
+  const [reachedEnd, setReachedEnd] = useState(false);
+
+  const fetchRequests = async (page = 1) => {
+    if (loading || !hasMore) return;
+
+    setLoading(true);
+
     const res = await appService.getRequests(
       filter == "delivery" ? "marketplace" : filter,
+      page,
     );
+
+    console.log("page", page, res.data.length);
+
+    if (res.data.length === 0) {
+      setHasMore(false);
+    }
+
     // console.log("res", res.data[0].packager);
-    setRequests(res.data);
+    setRequests((prev) =>
+      page == 1 ? res.data : [...(prev ? prev : []), ...res.data],
+    );
+    setLoading(false);
+    setPage(page);
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchRequests();
-    }, [, filter]),
-  );
+  useEffect(() => {
+    if (reachedEnd) {
+      console.log("page", page);
+      fetchRequests(page + 1);
+      setReachedEnd(false);
+    }
+  }, [, reachedEnd]);
+
+  useEffect(() => {
+    setPage(1);
+    setHasMore(true);
+    fetchRequests(1);
+  }, [filter]);
   return (
     <View
       style={{
         marginTop: 15,
         paddingBottom: 15,
         gap: 10,
+        flex: 1,
       }}
     >
       {requests ? (
         requests.length ? (
-          requests.map((item, key) => (
-            <RequestCard key={key} loading={false} data={item} />
-          ))
+          <FlatList
+            style={{
+              flex: 1,
+            }}
+            ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+            data={requests}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => (
+              <RequestCard completed={false} loading={false} data={item} />
+            )}
+            onEndReached={() => {
+              setReachedEnd(true);
+            }}
+            onEndReachedThreshold={0.2}
+            ListFooterComponent={
+              loading ? (
+                <View
+                  style={{
+                    paddingVertical: 10,
+                  }}
+                >
+                  <ActivityIndicator size="large" />
+                </View>
+              ) : null
+            }
+          />
         ) : (
           <NoDataFound text={"No Trip found"} />
         )
@@ -328,7 +388,7 @@ const Completed = ({ filter }: { filter: string }) => {
   useFocusEffect(
     useCallback(() => {
       fetchRequests();
-    }, []),
+    }, [, filter]),
   );
   return (
     <View

@@ -1,9 +1,14 @@
 import { Pressable, ScrollView, Text, View } from "react-native";
 
+import { appService } from "@/api/appService";
 import { GlowBG } from "@/components/account/glow-bg";
+import { NoDataFound } from "@/components/account/no-data-found";
 import { arrowLeft, delivery } from "@/icons";
-import { router, useNavigation } from "expo-router";
-import { useState } from "react";
+import { Capitalize } from "@/utils/helper";
+import { format, isToday } from "date-fns";
+import { router } from "expo-router";
+import { Skeleton } from "moti/skeleton";
+import { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path, SvgXml } from "react-native-svg";
 import { useSelector } from "react-redux";
@@ -94,10 +99,28 @@ const options = [
 
 export default function Transactions() {
   const app = useSelector((state: any) => state.app);
-  const [search, setSearch] = useState("");
 
-  const navigation = useNavigation();
+  const [transactions, setTransactions] = useState(null);
 
+  const fetchTransactions = async () => {
+    const res = await appService.getTransactions();
+
+    setTransactions(res.data);
+  };
+
+  const formatMessageDate = (date) => {
+    const d = new Date(date);
+
+    if (isToday(d)) {
+      return `Today, ${format(d, "h:mm a")}`;
+    }
+
+    return format(d, "MMM d, h:mm a");
+  };
+
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
   return (
     <View style={{ flex: 1 }}>
       <GlowBG />
@@ -151,89 +174,203 @@ export default function Transactions() {
               paddingLeft: 0,
             }}
           >
-            {[1, 2, 3, 4, 5].map((item, key) => (
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  paddingVertical: 10,
-                  paddingRight: 10,
-                }}
-                key={key}
-              >
+            {transactions ? (
+              transactions.length ? (
+                transactions.map((item, key) => (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      paddingVertical: 10,
+                      paddingRight: 20,
+                      flex: 1,
+                    }}
+                    key={key}
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        gap: 15,
+                        flex: 1,
+                        alignItems: "center",
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 48,
+                          height: 48,
+                          backgroundColor: options[key % options.length].color,
+                          borderRadius: "100%",
+                          justifyContent: "center",
+                          alignItems: "center",
+                        }}
+                      >
+                        {options[key % options.length].icon}
+                      </View>
+                      <View
+                        style={{
+                          justifyContent: "center",
+                          flex: 1,
+                          // borderWidth: 1,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontFamily: "HostGroteskBold",
+                            marginBottom: 2,
+                            flex: 1,
+                            width: "100%",
+                          }}
+                        >
+                          {Capitalize(item.type.replaceAll(["_", "-"], " "))}
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontFamily: "HostGroteskBold",
+
+                            color: "#9F9F9F",
+                            flex: 1,
+                            width: "100%",
+                          }}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {item.description}
+                        </Text>
+                      </View>
+                    </View>
+                    <View
+                      style={{
+                        justifyContent: "center",
+                        width: 100,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontFamily: "HostGroteskBold",
+                          marginBottom: 3,
+                        }}
+                      >
+                        + ₦{Number(item.amount).toLocaleString()}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontFamily: "HostGroteskBold",
+                          color: "#9F9F9F",
+                        }}
+                      >
+                        {formatMessageDate(item.created_at)}
+                      </Text>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <NoDataFound text={"No Transaction Found"} />
+              )
+            ) : (
+              [1, 2, 3, 4, 5].map((item, key) => (
                 <View
                   style={{
                     flexDirection: "row",
-                    gap: 20,
-                    flex: 1,
-                    alignItems: "center",
+                    justifyContent: "space-between",
+                    paddingVertical: 10,
+                    paddingRight: 20,
                   }}
+                  key={key}
                 >
                   <View
                     style={{
-                      width: 48,
-                      height: 48,
-                      backgroundColor: options[key % options.length].color,
-                      borderRadius: "100%",
-                      justifyContent: "center",
+                      flexDirection: "row",
+                      gap: 20,
+                      flex: 1,
                       alignItems: "center",
                     }}
                   >
-                    {options[key % options.length].icon}
+                    <Skeleton
+                      colorMode="light"
+                      height={48}
+                      width={48}
+                      radius={100}
+                    />
+                    <View
+                      style={{
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontFamily: "HostGroteskBold",
+                          marginBottom: 5,
+                        }}
+                      >
+                        <Skeleton
+                          colorMode="light"
+                          height={10}
+                          width={100}
+                          radius={3}
+                        />
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontFamily: "HostGroteskBold",
+                          textAlign: "center",
+                          color: "#9F9F9F",
+                        }}
+                        numberOfLines={2}
+                      >
+                        <Skeleton
+                          colorMode="light"
+                          height={10}
+                          width={150}
+                          radius={3}
+                        />
+                      </Text>
+                    </View>
                   </View>
                   <View
                     style={{
                       justifyContent: "center",
+                      width: 100,
                     }}
                   >
                     <Text
                       style={{
                         fontSize: 12,
                         fontFamily: "HostGroteskBold",
-                        marginBottom: 5,
+                        marginBottom: 6,
                       }}
                     >
-                      Wallet Top-Up
+                      <Skeleton
+                        colorMode="light"
+                        height={10}
+                        width={100}
+                        radius={3}
+                      />
                     </Text>
                     <Text
                       style={{
                         fontSize: 12,
                         fontFamily: "HostGroteskBold",
-                        textAlign: "center",
                         color: "#9F9F9F",
                       }}
-                      numberOfLines={2}
                     >
-                      Via Mastercard ****1234
+                      <Skeleton
+                        colorMode="light"
+                        height={10}
+                        width={100}
+                        radius={3}
+                      />
                     </Text>
                   </View>
                 </View>
-                <View
-                  style={{
-                    justifyContent: "center",
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      fontFamily: "HostGroteskBold",
-                      marginBottom: 3,
-                    }}
-                  >
-                    + ₦10,000
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      fontFamily: "HostGroteskBold",
-                      color: "#9F9F9F",
-                    }}
-                  >
-                    Today, 2:45 PM
-                  </Text>
-                </View>
-              </View>
-            ))}
+              ))
+            )}
           </ScrollView>
         </View>
       </SafeAreaView>

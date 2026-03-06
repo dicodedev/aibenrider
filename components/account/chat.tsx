@@ -12,6 +12,9 @@ import {
 import Svg, { Path, SvgXml } from "react-native-svg";
 
 import ProfilePicture from "@/assets/images/account/profile-picture.png";
+import { useGradualAnimation } from "@/hooks/use-gradual-animation";
+import Animated, { useAnimatedStyle } from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export const Chat = ({
   rider,
@@ -32,6 +35,14 @@ export const Chat = ({
   const [messages, setMessages] = useState(data);
 
   // console.log("m", messages);
+
+  const { height } = useGradualAnimation();
+
+  const keyboardPadding = useAnimatedStyle(() => {
+    return {
+      height: height.value,
+    };
+  }, []);
 
   const role = user.roles[0].name;
 
@@ -101,17 +112,20 @@ export const Chat = ({
       visible={visible}
       onRequestClose={() => setVisible(false)}
     >
-      <View
+      <SafeAreaView
         style={{
           flex: 1,
           backgroundColor: "rgba(0,0,0,0.5)",
           justifyContent: "flex-end",
           alignItems: "center",
+          paddingTop: 60,
         }}
+        edges={["left", "right"]}
       >
         <View
           style={{
-            height: "50%",
+            flex: 1,
+            // height: "95%",
             width: "100%",
           }}
         >
@@ -190,74 +204,96 @@ export const Chat = ({
               </View>
             </View>
           </View>
-          <ScrollView
-            style={{
-              flex: 1,
-              backgroundColor: "#F5F5F5",
-            }}
-            ref={scrollViewRef}
-            onLayout={() =>
-              scrollViewRef.current?.scrollToEnd({ animated: false })
-            }
-            onContentSizeChange={() =>
-              scrollViewRef.current?.scrollToEnd({ animated: true })
-            }
-          >
+          {messages.length ? (
+            <ScrollView
+              style={{
+                flex: 1,
+                backgroundColor: "#F5F5F5",
+              }}
+              ref={scrollViewRef}
+              onLayout={() =>
+                scrollViewRef.current?.scrollToEnd({ animated: false })
+              }
+              onContentSizeChange={() =>
+                scrollViewRef.current?.scrollToEnd({ animated: true })
+              }
+            >
+              <View
+                style={{
+                  gap: 8,
+                  padding: 25,
+                }}
+              >
+                {messages.map((item, key) =>
+                  item.from_id != rider.id ? (
+                    <View
+                      key={key}
+                      style={{
+                        padding: 10,
+                        backgroundColor: "rgba(255, 218, 173, 0.6)",
+                        alignSelf: "flex-start",
+                        maxWidth: "80%",
+                        borderRadius: 20,
+                        borderTopLeftRadius: 0,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: "#4B4B4B",
+                          fontFamily: "Outfit",
+                          fontSize: 16,
+                        }}
+                      >
+                        {item.message}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View
+                      key={key}
+                      style={{
+                        padding: 10,
+                        backgroundColor: "#FFFFFF",
+                        alignSelf: "flex-end",
+                        maxWidth: "80%",
+                        borderRadius: 20,
+                        borderTopRightRadius: 0,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: "#4B4B4B",
+                          fontFamily: "Outfit",
+                          fontSize: 16,
+                        }}
+                      >
+                        {item.message}
+                      </Text>
+                    </View>
+                  ),
+                )}
+              </View>
+            </ScrollView>
+          ) : (
             <View
               style={{
-                gap: 8,
-                padding: 25,
+                flex: 1,
+                justifyContent: "center",
+                alignItems: "center",
+                backgroundColor: "#F5F5F5",
               }}
             >
-              {messages.map((item, key) =>
-                item.from_id != rider.id ? (
-                  <View
-                    key={key}
-                    style={{
-                      padding: 10,
-                      backgroundColor: "rgba(255, 218, 173, 0.6)",
-                      alignSelf: "flex-start",
-                      maxWidth: "80%",
-                      borderRadius: 20,
-                      borderTopLeftRadius: 0,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: "#4B4B4B",
-                        fontFamily: "Outfit",
-                        fontSize: 16,
-                      }}
-                    >
-                      {item.message}
-                    </Text>
-                  </View>
-                ) : (
-                  <View
-                    key={key}
-                    style={{
-                      padding: 10,
-                      backgroundColor: "#FFFFFF",
-                      alignSelf: "flex-end",
-                      maxWidth: "80%",
-                      borderRadius: 20,
-                      borderTopRightRadius: 0,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: "#4B4B4B",
-                        fontFamily: "Outfit",
-                        fontSize: 16,
-                      }}
-                    >
-                      {item.message}
-                    </Text>
-                  </View>
-                ),
-              )}
+              <Text
+                style={{
+                  color: "#999",
+                  fontFamily: "HostGroteskBold",
+                  fontSize: 14,
+                  textAlign: "center",
+                }}
+              >
+                Send a message to start a conversation
+              </Text>
             </View>
-          </ScrollView>
+          )}
           <View
             style={{
               backgroundColor: "#fff",
@@ -289,6 +325,7 @@ export const Chat = ({
                 placeholder="Type your message..."
                 value={text}
                 onChangeText={setText}
+                placeholderTextColor="#999"
                 textAlignVertical="top"
               />
               <Pressable
@@ -307,8 +344,9 @@ export const Chat = ({
               </Pressable>
             </View>
           </View>
+          <Animated.View style={keyboardPadding} />
         </View>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 };

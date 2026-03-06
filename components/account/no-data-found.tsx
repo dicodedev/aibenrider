@@ -6,7 +6,7 @@ export function NoDataFound({ text }) {
   return (
     <View
       style={{
-        marginTop: 100,
+        marginVertical: 100,
         alignItems: "center",
         gap: 20,
       }}

@@ -5,13 +5,41 @@ export const appService = {
     const res = await api.get(`/user/details`);
     return res.data;
   },
+  getSomeReferrals: async () => {
+    const res = await api.get(`referral/all?per_page=5`);
+    return res.data;
+  },
+  getSomeTransactions: async () => {
+    const res = await api.get(`transaction/all?per_page=5`);
+    return res.data;
+  },
+  getTransactions: async () => {
+    const res = await api.get(`transaction/all`);
+    return res.data;
+  },
+  getTransactionStats: async () => {
+    const res = await api.get(`transaction/get-stats`);
+    return res.data;
+  },
+  getReferralStats: async () => {
+    const res = await api.get(`referral/get-stats`);
+    return res.data;
+  },
+  deleteAccount: async () => {
+    const res = await api.delete(`user/account`);
+    return res.data;
+  },
+  getReferrals: async () => {
+    const res = await api.get(`referral/all`);
+    return res.data;
+  },
   getRecentRequests: async () => {
     const res = await api.get(`/order/requests?per_page=5`);
     return res.data;
   },
-  getRequests: async (filter) => {
+  getRequests: async (filter, page = 1) => {
     const res = await api.get(
-      `/order/requests${filter ? "?type=" + filter : ""}`,
+      `/order/requests?page=${page}&per_page=5${filter ? "&type=" + filter : ""}`,
     );
     return res.data;
   },
