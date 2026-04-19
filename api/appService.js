@@ -13,8 +13,10 @@ export const appService = {
     const res = await api.get(`transaction/all?per_page=5`);
     return res.data;
   },
-  getTransactions: async () => {
-    const res = await api.get(`transaction/all`);
+  getTransactions: async ({ pageParam = 1 }) => {
+    console.log("p", pageParam);
+
+    const res = await api.get(`transaction/all?page=${pageParam}`);
     return res.data;
   },
   getTransactionStats: async () => {
@@ -37,15 +39,19 @@ export const appService = {
     const res = await api.get(`/order/requests?per_page=5`);
     return res.data;
   },
-  getRequests: async (filter, page = 1) => {
+  getRequests: async ({ pageParam = 1, filter = null }) => {
+    // console.log("p", pageParam);
+
     const res = await api.get(
-      `/order/requests?page=${page}&per_page=5${filter ? "&type=" + filter : ""}`,
+      `/order/requests?page=${pageParam}&per_page=5${filter ? "&type=" + filter : ""}`,
     );
     return res.data;
   },
-  getCompletedRequests: async (filter) => {
+  getCompletedRequests: async ({ pageParam = 1, filter = null }) => {
+    console.log("p", pageParam);
+
     const res = await api.get(
-      `/order/requests?status=completed${filter ? "&type=" + filter : ""}`,
+      `/order/requests?status=completed&page=${pageParam}${filter ? "&type=" + filter : ""}`,
     );
     return res.data;
   },
@@ -67,6 +73,14 @@ export const appService = {
   },
   cancelOrder: async (id, payload) => {
     const res = await api.post(`/order/${id}/cancel_order`, payload);
+    return res.data;
+  },
+  setUserStatus: async (payload) => {
+    const { data } = await api.post(`/user/set-status`, payload);
+    return data;
+  },
+  declineOrder: async (id, payload) => {
+    const res = await api.get(`/order/${id}/decline_order`);
     return res.data;
   },
   activateVehicle: async (id) => {

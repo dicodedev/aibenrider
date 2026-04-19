@@ -1,14 +1,15 @@
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { FlatList, Pressable, Text, View } from "react-native";
 
 import { appService } from "@/api/appService";
 import { GlowBG } from "@/components/account/glow-bg";
 import { NoDataFound } from "@/components/account/no-data-found";
+import ScalingDots from "@/components/scaling-dots";
 import { arrowLeft, delivery } from "@/icons";
 import { Capitalize } from "@/utils/helper";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { format, isToday } from "date-fns";
 import { router } from "expo-router";
 import { Skeleton } from "moti/skeleton";
-import { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path, SvgXml } from "react-native-svg";
 import { useSelector } from "react-redux";
@@ -100,14 +101,6 @@ const options = [
 export default function Transactions() {
   const app = useSelector((state: any) => state.app);
 
-  const [transactions, setTransactions] = useState(null);
-
-  const fetchTransactions = async () => {
-    const res = await appService.getTransactions();
-
-    setTransactions(res.data);
-  };
-
   const formatMessageDate = (date) => {
     const d = new Date(date);
 
@@ -118,9 +111,23 @@ export default function Transactions() {
     return format(d, "MMM d, h:mm a");
   };
 
-  useEffect(() => {
-    fetchTransactions();
-  }, []);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useInfiniteQuery({
+      queryKey: ["getCompletedRequests"],
+      queryFn: appService.getTransactions,
+      getNextPageParam: (lastPage) => {
+        if (!lastPage.next_page_url) return undefined;
+
+        const url = new URL(lastPage.next_page_url);
+        let nextPage = Number(url.searchParams.get("page"));
+        return nextPage;
+      },
+    });
+
+  // console.log("data", data);
+
+  const transactions = data?.pages.flatMap((page) => page.data) ?? [];
+  // console.log("request", requests);
   return (
     <View style={{ flex: 1 }}>
       <GlowBG />
@@ -167,107 +174,139 @@ export default function Transactions() {
               <SvgXml xml={arrowLeft()} width={21} height={16} />
             </Pressable>
           </View>
-
-          <ScrollView
-            contentContainerStyle={{
-              marginTop: 15,
-              paddingLeft: 0,
+          <View
+            style={{
+              marginTop: 0,
+              flex: 1,
             }}
           >
-            {transactions ? (
-              transactions.length ? (
-                transactions.map((item, key) => (
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      paddingVertical: 10,
-                      paddingRight: 20,
-                      flex: 1,
-                    }}
-                    key={key}
-                  >
+            {!isLoading ? (
+              transactions && transactions.length ? (
+                <FlatList
+                  style={{
+                    flex: 1,
+                  }}
+                  ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+                  data={transactions}
+                  showsVerticalScrollIndicator={false}
+                  keyExtractor={(item, index) => index}
+                  renderItem={({ item, index }) => (
                     <View
                       style={{
                         flexDirection: "row",
-                        gap: 15,
-                        flex: 1,
-                        alignItems: "center",
+                        justifyContent: "space-between",
+                        paddingVertical: 10,
+                        paddingRight: 0,
                       }}
                     >
                       <View
                         style={{
-                          width: 48,
-                          height: 48,
-                          backgroundColor: options[key % options.length].color,
-                          borderRadius: "100%",
-                          justifyContent: "center",
+                          flexDirection: "row",
+                          gap: 15,
+                          flex: 1,
                           alignItems: "center",
                         }}
                       >
-                        {options[key % options.length].icon}
+                        <View
+                          style={{
+                            width: 48,
+                            height: 48,
+                            backgroundColor:
+                              options[index % options.length].color,
+                            borderRadius: "100%",
+                            justifyContent: "center",
+                            alignItems: "center",
+                          }}
+                        >
+                          {options[index % options.length].icon}
+                        </View>
+                        <View
+                          style={{
+                            justifyContent: "center",
+                            flex: 1,
+                            // borderWidth: 1,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 12,
+                              fontFamily: "HostGroteskBold",
+                              marginBottom: 2,
+                              flex: 1,
+                              width: "100%",
+                            }}
+                          >
+                            {Capitalize(item.type.replaceAll(["_", "-"], " "))}
+                          </Text>
+                          <Text
+                            style={{
+                              fontSize: 12,
+                              fontFamily: "HostGroteskBold",
+
+                              color: "#9F9F9F",
+                              flex: 1,
+                              width: "100%",
+                            }}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                          >
+                            {item.description}
+                          </Text>
+                        </View>
                       </View>
                       <View
                         style={{
                           justifyContent: "center",
-                          flex: 1,
-                          // borderWidth: 1,
+                          width: 100,
                         }}
                       >
                         <Text
                           style={{
                             fontSize: 12,
                             fontFamily: "HostGroteskBold",
-                            marginBottom: 2,
-                            flex: 1,
-                            width: "100%",
+                            marginBottom: 3,
                           }}
                         >
-                          {Capitalize(item.type.replaceAll(["_", "-"], " "))}
+                          {item.kind == "debit" ? "-" : "+"} ₦
+                          {Number(item.amount).toLocaleString()}
                         </Text>
                         <Text
                           style={{
                             fontSize: 12,
                             fontFamily: "HostGroteskBold",
-
                             color: "#9F9F9F",
-                            flex: 1,
-                            width: "100%",
                           }}
-                          numberOfLines={1}
-                          ellipsizeMode="tail"
                         >
-                          {item.description}
+                          {formatMessageDate(item.created_at)}
                         </Text>
                       </View>
                     </View>
-                    <View
-                      style={{
-                        justifyContent: "center",
-                        width: 100,
-                      }}
-                    >
-                      <Text
+                  )}
+                  onEndReached={() => {
+                    if (hasNextPage) fetchNextPage();
+                  }}
+                  onEndReachedThreshold={0.2} //0.2
+                  ListFooterComponent={
+                    isFetchingNextPage ? (
+                      <View
                         style={{
-                          fontSize: 12,
-                          fontFamily: "HostGroteskBold",
-                          marginBottom: 3,
+                          marginTop: 10,
                         }}
                       >
-                        + ₦{Number(item.amount).toLocaleString()}
-                      </Text>
-                      <Text
-                        style={{
-                          fontSize: 12,
-                          fontFamily: "HostGroteskBold",
-                          color: "#9F9F9F",
-                        }}
-                      >
-                        {formatMessageDate(item.created_at)}
-                      </Text>
-                    </View>
-                  </View>
-                ))
+                        <ScalingDots
+                          dotCount={3}
+                          dotSize={9}
+                          dotColor="#ccc"
+                          speed={300}
+                          style={{
+                            marginVertical: 5,
+                          }}
+                          scaleRange={[1, 1.5]}
+                        />
+                      </View>
+                    ) : null
+                  }
+                />
               ) : (
                 <NoDataFound text={"No Transaction Found"} />
               )
@@ -371,7 +410,7 @@ export default function Transactions() {
                 </View>
               ))
             )}
-          </ScrollView>
+          </View>
         </View>
       </SafeAreaView>
     </View>

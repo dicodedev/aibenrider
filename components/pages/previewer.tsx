@@ -103,7 +103,7 @@ export default function Previewer() {
                   <Image
                     source={{ uri: item.url }}
                     style={styles.mainImage}
-                    resizeMode="contain"
+                    resizeMode="stretch"
                   />
                 )}
               />

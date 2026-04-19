@@ -1,18 +1,32 @@
 import * as Location from "expo-location";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Toast from "react-native-toast-message";
 
 export const useCurrentLocation = (options = {}) => {
-  const [location, setLocation] = useState<Location.LocationObject | null>(
-    null,
-  );
-  const [address, setAddress] =
-    useState<Location.LocationGeocodedAddress | null>(null);
+  const [location, setLocation] = useState(null);
+  const [address, setAddress] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
+
+  // Prevent multiple reverse geocode calls
+  const isFetchingAddress = useRef(false);
+
+  // Store last coordinates to avoid duplicate geocoding
+  const lastCoords = useRef(null);
+
+  const shouldFetchAddress = (coords) => {
+    if (!lastCoords.current) return true;
+
+    return (
+      Math.abs(coords.latitude - lastCoords.current.latitude) > 0.0001 ||
+      Math.abs(coords.longitude - lastCoords.current.longitude) > 0.0001
+    );
+  };
 
   const getLocation = useCallback(async () => {
     try {
+      if (isFetchingAddress.current) return;
+
       setLoading(true);
       setError(null);
 
@@ -28,39 +42,44 @@ export const useCurrentLocation = (options = {}) => {
       }
 
       const currentLocation = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Highest,
+        accuracy: Location.Accuracy.High,
         ...options,
       });
 
-      setLocation(currentLocation.coords);
+      console.log("current loc", currentLocation);
 
-      // Reverse geocode
+      const coords = currentLocation.coords;
+      setLocation(coords);
+
+      // Only reverse geocode if location changed significantly
+      if (!shouldFetchAddress(coords)) return;
+
+      lastCoords.current = coords;
+      isFetchingAddress.current = true;
+
       const reverseGeocode = await Location.reverseGeocodeAsync({
-        latitude: currentLocation.coords.latitude,
-        longitude: currentLocation.coords.longitude,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
       });
-      console.log("rev geo", reverseGeocode)
+
+      console.log("rev", reverseGeocode);
 
       if (reverseGeocode.length > 0) {
         setAddress(reverseGeocode[0]);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.log("location error", err);
-      // Toast.show({
-      //   type: "error",
-      //   text1: "Location Error",
-      //   text2: err?.message || "Failed to get location",
-      // });
+      setError(err?.message || "Failed to get location");
     } finally {
+      isFetchingAddress.current = false;
       setLoading(false);
     }
-  }, [options]);
+  }, []); // ✅ stable, no re-trigger loop
 
+  // Run only once on mount
   useEffect(() => {
-    if (address) return;
-
     getLocation();
-  }, [getLocation]);
+  }, []);
 
   return {
     coords: location,

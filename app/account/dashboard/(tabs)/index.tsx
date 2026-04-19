@@ -10,31 +10,58 @@ import {
 import { GlowBG } from "@/components/account/glow-bg";
 import { Menu } from "@/components/account/menu";
 import { RequestCard } from "@/components/account/request-card";
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { router } from "expo-router";
+import { useEffect, useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 
 import { appService } from "@/api/appService";
 import ProfilePicture from "@/assets/images/account/profile-picture.png";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function HomeScreen() {
   const app = useSelector((state: any) => state.app);
-  const [requests, setRequests] = useState(null);
 
   const data = app.user;
 
-  const fetchRequests = async () => {
-    const res = await appService.getRecentRequests();
-    console.log("res", res.data[0].packager);
-    setRequests(res.data);
-  };
+  console.log("status", data?.status);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchRequests();
-    }, []),
-  );
+  const queryClient = useQueryClient();
+
+  const { isLoading, data: requests } = useQuery({
+    queryKey: ["getRecentRequests"],
+    queryFn: () => appService.getRecentRequests(),
+  });
+
+  const updateStatus = useMutation({
+    mutationFn: (payload) => appService.setUserStatus(payload),
+    onMutate: async (payload) => {
+      await queryClient.cancelQueries(["getUserDetails"]);
+
+      const previousData = queryClient.getQueryData(["getUserDetails"]);
+
+      queryClient.setQueryData(["getUserDetails"], (oldData: any) => {
+        if (!oldData) return oldData;
+
+        return {
+          ...oldData,
+          status: payload.status,
+        };
+      });
+
+      return { previousData };
+    },
+    onError: (err, payload, context) => {
+      console.log("error");
+      if (context?.previousData) {
+        queryClient.setQueryData(["getUserDetails"], context.previousData);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries(["getUserDetails"]);
+    },
+  });
+
   return (
     <View style={{ flex: 1 }}>
       <GlowBG />
@@ -100,7 +127,14 @@ export default function HomeScreen() {
                 alignItems: "center",
               }}
             >
-              <CustomSwitch />
+              <CustomSwitch
+                on={data?.status == "online" ? true : false}
+                setOn={() =>
+                  updateStatus.mutate({
+                    status: data?.status == "offline" ? "online" : "offline",
+                  })
+                }
+              />
               <Text
                 style={{
                   fontSize: 14,
@@ -209,8 +243,8 @@ export default function HomeScreen() {
               gap: 10,
             }}
           >
-            {requests
-              ? requests.map((item, key) => (
+            {!isLoading && requests
+              ? requests.data.map((item, key) => (
                   <RequestCard key={key} loading={false} data={item} />
                 ))
               : Array(4)
@@ -225,23 +259,21 @@ export default function HomeScreen() {
   );
 }
 
-function CustomSwitch() {
-  const [on, setOn] = useState(false);
-  const translateX = useRef(new Animated.Value(6)).current;
+function CustomSwitch({ on, setOn }: { on: boolean; setOn: any }) {
+  const translateX = useRef(new Animated.Value(!on ? 6 : 70)).current;
 
-  const toggle = () => {
+  useEffect(() => {
+    translateX.stopAnimation();
+
     Animated.timing(translateX, {
-      toValue: on ? 6 : 70,
+      toValue: on ? 70 : 6,
       duration: 200,
       useNativeDriver: true,
     }).start();
-
-    setOn(!on);
-  };
-
+  }, [on]);
   return (
     <Pressable
-      onPress={toggle}
+      onPress={setOn}
       style={{
         width: 110,
         height: 40,

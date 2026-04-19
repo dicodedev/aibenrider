@@ -1,3 +1,4 @@
+// import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 
 const TOKEN_KEY = "access_token";
@@ -30,12 +31,20 @@ export const deleteToken = async () => {
   }
 };
 
-export const getUser = async () => {
+export const storeUserData = async (user) => {
   try {
-    const data = await SecureStore.getItemAsync(USER_KEY);
-    return JSON.parse(data);
+    const jsonValue = JSON.stringify(user);
+    await AsyncStorage.setItem(USER_KEY, jsonValue);
   } catch (e) {
-    console.error("Error getting token", e);
-    return null;
+    console.log("Error saving data", e);
+  }
+};
+
+export const getUserData = async () => {
+  try {
+    const jsonValue = await AsyncStorage.getItem(USER_KEY);
+    return jsonValue != null ? JSON.parse(jsonValue) : null;
+  } catch (e) {
+    console.log("Error reading data", e);
   }
 };

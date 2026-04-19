@@ -1,22 +1,22 @@
-import { emailOrange } from "@/icons";
-import { router } from "expo-router";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { arrowLeft, emailOrange } from "@/icons";
+import { router, useNavigation } from "expo-router";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path, SvgXml } from "react-native-svg";
 import { useSelector } from "react-redux";
 
-const products = [
-  require("@/assets/images/landing/Shoe.png"),
-  require("@/assets/images/landing/Bag.png"),
-  require("@/assets/images/landing/Jug.png"),
-  require("@/assets/images/landing/Banana.png"),
-  require("@/assets/images/landing/Orange.png"),
-  require("@/assets/images/landing/Nike.png"),
-];
-
 export default function Index() {
   const app = useSelector((state: any) => state.app);
+
+  const navigation = useNavigation();
+
   return (
     <SafeAreaView
       style={{
@@ -32,15 +32,45 @@ export default function Index() {
           paddingTop: 30,
         }}
       >
-        <Text
+        <View
           style={{
-            fontSize: 29,
-            fontFamily: "HostGroteskBold",
-            textAlign: "center",
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 10,
+            // borderWidth: 1,
           }}
         >
-          Customer Support
-        </Text>
+          <Pressable
+            onPress={() => navigation.openDrawer()}
+            hitSlop={40}
+            style={{
+              height: 40,
+              width: 40,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <SvgXml xml={arrowLeft()} width={21} height={16} />
+          </Pressable>
+          <Text
+            style={{
+              fontFamily: "HostGroteskBold",
+              fontSize: 24,
+            }}
+          >
+            Customer Support
+          </Text>
+          <Pressable
+            style={{
+              width: 70,
+              borderRadius: 100,
+              backgroundColor: "transparent",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          ></Pressable>
+        </View>
         <View
           style={{
             backgroundColor: "#FFFFFF",
@@ -74,7 +104,7 @@ export default function Index() {
               backgroundColor: "#E7E7E7",
             }}
           ></View>
-          <Card
+          {/* <Card
             icon={
               <Svg width="19" height="19" viewBox="0 0 19 19" fill="none">
                 <Path
@@ -86,7 +116,7 @@ export default function Index() {
             heading="Call us"
             subHeading="We are available Mon-Fri, 24/7"
             link="/account/support/call"
-          />
+          /> */}
         </View>
 
         <View

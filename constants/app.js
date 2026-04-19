@@ -86,6 +86,7 @@ export const sOptions = [
 export const requestCardConfig = {
   marketplace: {
     text: "Delivery",
+    ident: "marketplace",
     background: "#DA8913",
     transparentBackground: "#FFDAAD",
     color: "#CA7A07",
@@ -102,6 +103,7 @@ export const requestCardConfig = {
   },
   rides: {
     text: "Ride",
+    ident: "rides",
     background: "#100152",
     transparentBackground: "#CCD9F8",
     color: "#100152",
@@ -116,6 +118,7 @@ export const requestCardConfig = {
   },
   logistics: {
     text: "Hire",
+    ident: "logistics",
     background: "#49932C",
     transparentBackground: "#E6F5E0",
     color: "#49932C",

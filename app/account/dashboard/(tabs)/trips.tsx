@@ -1,20 +1,15 @@
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { appService } from "@/api/appService";
 import { GlowBG } from "@/components/account/glow-bg";
 import { NoDataFound } from "@/components/account/no-data-found";
 import { RequestCard } from "@/components/account/request-card";
+import ScalingDots from "@/components/scaling-dots";
 import { requestCardConfig } from "@/constants/app";
 import { arrowLeft } from "@/icons";
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { router } from "expo-router";
+import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path, SvgXml } from "react-native-svg";
 import { useSelector } from "react-redux";
@@ -267,9 +262,9 @@ export default function Trips() {
             ))}
           </View>
           {section ? (
-            <Completed filter={selected ? selected.text.toLowerCase() : null} />
+            <Completed filter={selected ? selected.ident : null} />
           ) : (
-            <Pending filter={selected ? selected.text.toLowerCase() : null} />
+            <Pending filter={selected ? selected.ident : null} />
           )}
         </View>
       </SafeAreaView>
@@ -278,61 +273,38 @@ export default function Trips() {
 }
 
 const Pending = ({ filter }: { filter: string }) => {
-  const [requests, setRequests] = useState(null);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useInfiniteQuery({
+      queryKey: ["getPendingRequests", filter],
+      queryFn: ({ pageParam = 1 }) => {
+        return appService.getRequests({
+          filter,
+          pageParam,
+        });
+      },
+      getNextPageParam: (lastPage) => {
+        if (!lastPage.next_page_url) return undefined;
 
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [canLoad, setCanLoad] = useState(false);
-  const [reachedEnd, setReachedEnd] = useState(false);
+        const url = new URL(lastPage.next_page_url);
+        let nextPage = Number(url.searchParams.get("page"));
+        return nextPage;
+      },
+    });
 
-  const fetchRequests = async (page = 1) => {
-    if (loading || !hasMore) return;
+  // console.log("data", data);
 
-    setLoading(true);
+  const requests = data?.pages.flatMap((page) => page.data) ?? [];
+  // console.log("request", requests);
 
-    const res = await appService.getRequests(
-      filter == "delivery" ? "marketplace" : filter,
-      page,
-    );
-
-    console.log("page", page, res.data.length);
-
-    if (res.data.length === 0) {
-      setHasMore(false);
-    }
-
-    // console.log("res", res.data[0].packager);
-    setRequests((prev) =>
-      page == 1 ? res.data : [...(prev ? prev : []), ...res.data],
-    );
-    setLoading(false);
-    setPage(page);
-  };
-
-  useEffect(() => {
-    if (reachedEnd) {
-      console.log("page", page);
-      fetchRequests(page + 1);
-      setReachedEnd(false);
-    }
-  }, [, reachedEnd]);
-
-  useEffect(() => {
-    setPage(1);
-    setHasMore(true);
-    fetchRequests(1);
-  }, [filter]);
   return (
     <View
       style={{
         marginTop: 15,
-        paddingBottom: 15,
         gap: 10,
         flex: 1,
       }}
     >
-      {requests ? (
+      {!isLoading ? (
         requests.length ? (
           <FlatList
             style={{
@@ -340,22 +312,36 @@ const Pending = ({ filter }: { filter: string }) => {
             }}
             ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
             data={requests}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({ item }) => (
-              <RequestCard completed={false} loading={false} data={item} />
-            )}
-            onEndReached={() => {
-              setReachedEnd(true);
+            showsVerticalScrollIndicator={false}
+            keyExtractor={(item, index) => index}
+            renderItem={({ item }) => {
+              // console.log("item", item);
+
+              return (
+                <RequestCard completed={false} loading={false} data={item} />
+              );
             }}
-            onEndReachedThreshold={0.2}
+            onEndReached={() => {
+              if (hasNextPage) fetchNextPage();
+            }}
+            onEndReachedThreshold={0.2} //0.2
             ListFooterComponent={
-              loading ? (
+              isFetchingNextPage ? (
                 <View
                   style={{
-                    paddingVertical: 10,
+                    marginTop: 10,
                   }}
                 >
-                  <ActivityIndicator size="large" />
+                  <ScalingDots
+                    dotCount={3}
+                    dotSize={9}
+                    dotColor="#ccc"
+                    speed={300}
+                    style={{
+                      marginVertical: 5,
+                    }}
+                    scaleRange={[1, 1.5]}
+                  />
                 </View>
               ) : null
             }
@@ -375,39 +361,78 @@ const Pending = ({ filter }: { filter: string }) => {
 };
 
 const Completed = ({ filter }: { filter: string }) => {
-  const [requests, setRequests] = useState(null);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useInfiniteQuery({
+      queryKey: ["getCompletedRequests", filter],
+      queryFn: ({ pageParam = 1 }) => {
+        return appService.getCompletedRequests({
+          filter,
+          pageParam,
+        });
+      },
+      getNextPageParam: (lastPage) => {
+        if (!lastPage.next_page_url) return undefined;
 
-  const fetchRequests = async () => {
-    const res = await appService.getCompletedRequests(
-      filter == "delivery" ? "marketplace" : filter,
-    );
-    // console.log("res", res.data[0].packager);
-    setRequests(res.data);
-  };
+        const url = new URL(lastPage.next_page_url);
+        let nextPage = Number(url.searchParams.get("page"));
+        return nextPage;
+      },
+    });
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchRequests();
-    }, [, filter]),
-  );
+  // console.log("data", data);
+
+  const requests = data?.pages.flatMap((page) => page.data) ?? [];
+  // console.log("request", requests);
+
   return (
     <View
       style={{
         marginTop: 15,
-        paddingBottom: 15,
         gap: 10,
+        flex: 1,
       }}
     >
-      {requests ? (
+      {!isLoading ? (
         requests.length ? (
-          requests.map((item, key) => (
-            <RequestCard
-              completed={true}
-              key={key}
-              loading={false}
-              data={item}
-            />
-          ))
+          <FlatList
+            style={{
+              flex: 1,
+            }}
+            ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+            data={requests}
+            showsVerticalScrollIndicator={false}
+            keyExtractor={(item, index) => index}
+            renderItem={({ item }) => {
+              // console.log("item", item);
+              return (
+                <RequestCard completed={true} loading={false} data={item} />
+              );
+            }}
+            onEndReached={() => {
+              if (hasNextPage) fetchNextPage();
+            }}
+            onEndReachedThreshold={0.2} //0.2
+            ListFooterComponent={
+              isFetchingNextPage ? (
+                <View
+                  style={{
+                    marginTop: 10,
+                  }}
+                >
+                  <ScalingDots
+                    dotCount={3}
+                    dotSize={9}
+                    dotColor="#ccc"
+                    speed={300}
+                    style={{
+                      marginVertical: 5,
+                    }}
+                    scaleRange={[1, 1.5]}
+                  />
+                </View>
+              ) : null
+            }
+          />
         ) : (
           <NoDataFound text={"No Trip found"} />
         )

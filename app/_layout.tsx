@@ -17,7 +17,12 @@ import { Provider } from "react-redux";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import Toast, { BaseToast, ErrorToast } from "react-native-toast-message";
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+const queryClient = new QueryClient();
 
 export const unstable_settings = {
   anchor: "(tabs)",
@@ -130,29 +135,36 @@ export default function RootLayout() {
   return (
     <Provider store={store}>
       <ThemeProvider value={DefaultTheme}>
-        <AppLoader>
-          <Stack>
-            <Stack.Screen name="account" options={{ headerShown: false }} />
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="onboard" options={{ headerShown: false }} />
-            <Stack.Screen name="referral" options={{ headerShown: false }} />
-            <Stack.Screen name="login" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="set-password"
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="complete-profile"
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="profile-completed"
-              options={{ headerShown: false }}
-            />
-          </Stack>
-          <StatusBar style="auto" />
-          <Toast position="top" config={toastConfig} />
-        </AppLoader>
+        <KeyboardProvider>
+          <QueryClientProvider client={queryClient}>
+            <AppLoader>
+              <Stack>
+                <Stack.Screen name="account" options={{ headerShown: false }} />
+                <Stack.Screen name="index" options={{ headerShown: false }} />
+                <Stack.Screen name="onboard" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="referral"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen name="login" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="set-password"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="complete-profile"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="profile-completed"
+                  options={{ headerShown: false }}
+                />
+              </Stack>
+              <StatusBar style="auto" />
+              <Toast position="top" config={toastConfig} />
+            </AppLoader>
+          </QueryClientProvider>
+        </KeyboardProvider>
       </ThemeProvider>
     </Provider>
   );

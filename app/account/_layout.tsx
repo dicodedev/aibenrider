@@ -25,8 +25,11 @@ import { useCurrentLocation } from "@/hooks/use-current-location";
 import { appSlice } from "@/store/appSlice";
 import NetInfo from "@react-native-community/netinfo";
 
+import { getUserData, storeUserData } from "@/utils/secureStore";
+import { useQuery } from "@tanstack/react-query";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
+import Toast from "react-native-toast-message";
 
 export default function AccountLayout() {
   const app = useSelector((state: any) => state.app);
@@ -50,14 +53,27 @@ export default function AccountLayout() {
 
   useEffect(() => {
     const getDetails = async () => {
-      const res = await appService.getUserDetails();
-
-      dispatch(appSlice.actions.setUser(res.data));
+      let result = await getUserData();
+      dispatch(appSlice.actions.setUser(result));
     };
     getDetails();
+  }, []);
 
-    console.log("path", pathname);
-  }, [, pathname]);
+  const { isLoading, data, isSuccess } = useQuery({
+    queryKey: ["getUserDetails"],
+    queryFn: appService.getUserDetails,
+  });
+
+  useEffect(() => {
+    if (isSuccess) {
+      const storeData = async () => {
+        dispatch(appSlice.actions.setUser(data.data));
+
+        await storeUserData(data.data);
+      };
+      storeData();
+    }
+  }, [data]);
 
   useEffect(() => {
     async function registerForPushNotifications() {
@@ -88,7 +104,7 @@ export default function AccountLayout() {
     registerForPushNotifications();
   }, []);
 
-  console.log("cords", coords);
+  // console.log("cords", coords);
 
   useEffect(() => {
     const setCordinates = async () => {
@@ -114,14 +130,19 @@ export default function AccountLayout() {
             },
       );
 
-      console.log(res.data);
+      console.log(res.data, Platform.OS);
     };
 
     setPushToken();
   }, [app.pushToken]);
 
   useEffect(() => {
-    !isOnline && router.push("/account/no-internet");
+    !isOnline &&
+      Toast.show({
+        type: "info",
+        text1: "No internet connection",
+        text2: "Connect to the internet and try again",
+      });
   }, [isOnline]);
   return (
     <View

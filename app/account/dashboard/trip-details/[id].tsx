@@ -8,15 +8,13 @@ import {
   View,
 } from "react-native";
 
-const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
-
 import { appService } from "@/api/appService";
 import { Chat } from "@/components/account/chat";
 import { requestCardConfig } from "@/constants/app";
-import { arrowLeft, locationMarker } from "@/icons";
+import { arrowLeft } from "@/icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { Skeleton } from "moti/skeleton";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path, Rect, SvgXml } from "react-native-svg";
 import { useSelector } from "react-redux";
@@ -30,6 +28,7 @@ import { Capitalize } from "@/utils/helper";
 import { Modal } from "react-native";
 import Toast from "react-native-toast-message";
 
+import axios from "axios";
 import MapView, { Marker, Polyline } from "react-native-maps";
 
 export default function TripDetails() {
@@ -38,6 +37,7 @@ export default function TripDetails() {
 
   const [call, setCall] = useState(false);
   const [cancel, setCancel] = useState(false);
+  const [showDirection, setShowDirection] = useState(false);
 
   const [cancelled, setCancelled] = useState(false);
   const [accepted, setAccepted] = useState(false);
@@ -46,6 +46,8 @@ export default function TripDetails() {
 
   const [completed, setCompleted] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [declined, setDeclined] = useState(false);
+  const [decling, setDecling] = useState(false);
 
   const [pChat, setPChat] = useState(false);
   const [cChat, setCChat] = useState(false);
@@ -56,7 +58,18 @@ export default function TripDetails() {
   const [customerChats, setCustomerChats] = useState(null);
   const [routeCoords, setRouteCoords] = useState(null);
 
+  const mapRef = useRef(null);
+
   const { id } = useLocalSearchParams();
+
+  const origin = {
+    latitude: order?.pickup_latitude,
+    longitude: order?.pickup_longitude,
+  };
+  const destination = {
+    latitude: order?.customer_latitude,
+    longitude: order?.customer_longitude,
+  };
 
   const fetchOrderDetails = async () => {
     const res = await appService.getOrder(id);
@@ -69,6 +82,22 @@ export default function TripDetails() {
     // );
 
     setOrder(res.data);
+  };
+
+  const fitMap = () => {
+    if (!routeCoords) return;
+
+    const coordinates = [origin, destination, ...routeCoords];
+
+    mapRef.current.fitToCoordinates(coordinates, {
+      edgePadding: {
+        top: 80,
+        right: 80,
+        bottom: 80,
+        left: 80,
+      },
+      animated: true,
+    });
   };
 
   const getPackagerChat = async () => {
@@ -136,40 +165,53 @@ export default function TripDetails() {
   };
 
   const getDirections = async (origin, destination) => {
-    const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+    try {
+      const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-    const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${API_KEY}`;
+      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${API_KEY}`;
 
-    const response = await fetch(url);
-    const json = await response.json();
+      const { data } = await axios.get(url, { timeout: 10000 });
+      // console.log("Directions:", data);
 
-    console.log("json", json?.routes[0].overview_polyline.points);
+      // console.log("json", data, data?.routes?.length);
 
-    if (json?.routes?.length) {
-      setRouteCoords(decodePolyline(json?.routes[0].overview_polyline.points));
+      if (data?.routes?.length) {
+        setRouteCoords(
+          decodePolyline(data?.routes[0].overview_polyline.points),
+        );
+      }
+      return null;
+    } catch (error) {
+      console.log("error", error);
+      return null;
     }
-
-    return null;
   };
+
+  useEffect(() => {
+    console.log("routeCoords", routeCoords);
+
+    if (routeCoords && routeCoords.length) {
+      fitMap();
+    }
+  }, [routeCoords]);
 
   useEffect(() => {
     if (!order) return;
 
-    getDirections(
-      {
-        latitude: order.pickup_latitude,
-        longitude: order.pickup_longitude,
-      },
-      {
-        latitude: order.customer_latitude,
-        longitude: order.customer_longitude,
-      },
-    );
-  }, [, order]);
+    console.log("type", order.type);
 
-  // useEffect(() => {
-  //   console.log("routeCoords", routeCoords);
-  // }, [, routeCoords]);
+    console.log("cords", origin, destination);
+
+    const fetchDirections = async () => {
+      await getDirections(origin, destination);
+    };
+
+    fetchDirections();
+  }, [order]);
+
+  useEffect(() => {
+    console.log("routeCoords", routeCoords);
+  }, [, routeCoords]);
 
   const accept = async () => {
     try {
@@ -217,6 +259,29 @@ export default function TripDetails() {
     }
   };
 
+  const declineOrder = async () => {
+    try {
+      setDecling(true);
+
+      await appService.declineOrder(order.id);
+
+      router.back();
+    } catch (error: any) {
+      console.log("error", error);
+
+      Toast.show({
+        type: "error",
+        text1: "Request Failed",
+        text2:
+          (error.errors !== undefined && error.errors[0]
+            ? error.errors[0]
+            : error.message) || "Something went wrong",
+      });
+    } finally {
+      setDecling(false);
+    }
+  };
+
   useEffect(() => {
     fetchOrderDetails();
   }, []);
@@ -237,7 +302,7 @@ export default function TripDetails() {
     if (!order) return;
     // if (!order || !order.rider) return;
 
-    getPackagerChat();
+    order && order.packager && getPackagerChat();
     getCustomerChat();
   }, [order]);
   return (
@@ -247,6 +312,14 @@ export default function TripDetails() {
       }}
     >
       {/* {call && <Call setCall={setCall} />} */}
+
+      {order && showDirection && (
+        <Direction
+          order={order}
+          visible={showDirection}
+          setVisible={setShowDirection}
+        />
+      )}
 
       {order && customerChats && cChat && (
         <Chat
@@ -496,171 +569,184 @@ export default function TripDetails() {
                   </Text>
                 )}
               </View>
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  marginTop: 20,
-                }}
-              >
+              {order && order.packager && (
                 <View
                   style={{
                     flexDirection: "row",
-                    gap: 10,
-                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginTop: 20,
                   }}
                 >
-                  {!order ? (
-                    <Skeleton
-                      colorMode="light"
-                      height={44}
-                      width={44}
-                      radius={100}
-                    />
-                  ) : (
-                    <View
-                      style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: "100%",
-                      }}
-                    >
-                      <Image
-                        source={
-                          order
-                            ? order?.packager.picture &&
-                              order?.packager.picture != "null"
-                              ? { uri: order?.packager.picture }
-                              : ProfilePicture
-                            : ProfilePicture
-                        }
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          borderRadius: 100,
-                        }}
-                      />
-                    </View>
-                  )}
-                  <View>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      gap: 10,
+                      alignItems: "center",
+                    }}
+                  >
                     {!order ? (
-                      <>
-                        <Skeleton
-                          colorMode="light"
-                          height={10}
-                          width={120}
-                          radius={5}
-                        />
-                        <Skeleton
-                          colorMode="light"
-                          height={6}
-                          width={10}
-                          radius={2}
-                        />
-                      </>
+                      <Skeleton
+                        colorMode="light"
+                        height={44}
+                        width={44}
+                        radius={100}
+                      />
                     ) : (
-                      <>
-                        <Text
+                      <View
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: "100%",
+                        }}
+                      >
+                        <Image
+                          source={
+                            order
+                              ? order?.packager.picture &&
+                                order?.packager.picture != "null"
+                                ? { uri: order?.packager.picture }
+                                : ProfilePicture
+                              : ProfilePicture
+                          }
                           style={{
-                            fontFamily: "HostGroteskBold",
-                            fontSize: 17,
-                            marginBottom: 1,
+                            width: "100%",
+                            height: "100%",
+                            borderRadius: 100,
                           }}
+                        />
+                      </View>
+                    )}
+                    <View>
+                      {!order ? (
+                        <>
+                          <Skeleton
+                            colorMode="light"
+                            height={10}
+                            width={120}
+                            radius={5}
+                          />
+                          <Skeleton
+                            colorMode="light"
+                            height={6}
+                            width={10}
+                            radius={2}
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <Text
+                            style={{
+                              fontFamily: "HostGroteskBold",
+                              fontSize: 17,
+                              marginBottom: 1,
+                            }}
+                          >
+                            {order.packager.name}
+                          </Text>
+                          <Text
+                            style={{
+                              fontFamily: "HostGrotesk",
+                              fontSize: 12,
+                            }}
+                          >
+                            Packager
+                          </Text>
+                        </>
+                      )}
+                    </View>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      gap: 20,
+                    }}
+                  >
+                    {!order ? (
+                      <Skeleton
+                        colorMode="light"
+                        height={44}
+                        width={44}
+                        radius={100}
+                      />
+                    ) : (
+                      <Pressable
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: "100%",
+                          backgroundColor: "#CCD9F8",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          opacity: order?.status == "completed" ? 0.4 : 1,
+                        }}
+                        onPress={
+                          order?.status == "completed"
+                            ? () => {}
+                            : () =>
+                                Linking.openURL(
+                                  `tel:${order.packager.phone_number}`,
+                                )
+                        }
+                      >
+                        <Svg
+                          width="15"
+                          height="15"
+                          viewBox="0 0 15 15"
+                          fill="none"
                         >
-                          {order.packager.name}
-                        </Text>
-                        <Text
-                          style={{
-                            fontFamily: "HostGrotesk",
-                            fontSize: 12,
-                          }}
+                          <Path
+                            d="M2.00816 6.25199L3.9989 4.26124C4.19668 4.06016 4.33657 3.80947 4.40385 3.53556C4.47114 3.26166 4.46331 2.97468 4.38121 2.70485C4.24171 2.24584 4.11846 1.78205 4.01172 1.31434C3.92425 0.904883 3.56456 0.565552 3.14529 0.565552H2.00816C1.17114 0.565552 0.482677 1.24723 0.574673 2.07972C1.27294 8.40787 6.29806 13.4322 12.6255 14.1305C13.4579 14.2225 14.1396 13.5348 14.1396 12.6978V11.5591C14.1396 11.1414 13.7988 10.7975 13.3871 10.7221C12.9345 10.6341 12.4878 10.5185 12.0493 10.376C11.471 10.192 10.8285 10.3217 10.3994 10.75L8.45319 12.697"
+                            stroke="#100152"
+                            stroke-width="1.1311"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
+                        </Svg>
+                      </Pressable>
+                    )}
+                    {!order ? (
+                      <Skeleton
+                        colorMode="light"
+                        height={44}
+                        width={44}
+                        radius={100}
+                      />
+                    ) : (
+                      <Pressable
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: "100%",
+                          backgroundColor: "#E0FAD5",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          opacity: order?.status == "completed" ? 0.4 : 1,
+                        }}
+                        onPress={
+                          order?.status == "completed"
+                            ? () => {}
+                            : () => setPChat(true)
+                        }
+                      >
+                        <Svg
+                          width="26"
+                          height="26"
+                          viewBox="0 0 26 26"
+                          fill="none"
                         >
-                          Packager
-                        </Text>
-                      </>
+                          <Path
+                            d="M8.35694 10.3671H16.8091M8.35694 14.8008H14.3846M12.583 22.284C14.6902 22.2835 16.7399 21.597 18.4221 20.3281C20.1044 19.0592 21.3277 17.277 21.9071 15.2511C22.4865 13.2251 22.3904 11.0656 21.6334 9.09913C20.8764 7.13265 19.4997 5.46615 17.7114 4.35167C15.9231 3.23718 13.8205 2.73533 11.7216 2.922C9.62274 3.10867 7.64173 3.97372 6.07819 5.38632C4.51465 6.79891 3.45361 8.68223 3.05553 10.7514C2.65746 12.8207 2.94401 14.9632 3.87184 16.8551C3.98509 17.0858 4.02285 17.3459 3.96517 17.5955L3.10947 21.3035C3.08534 21.4076 3.08811 21.5161 3.11751 21.6187C3.14691 21.7214 3.20196 21.815 3.2775 21.8905C3.35303 21.966 3.44655 22.0211 3.54925 22.0505C3.65195 22.0799 3.76044 22.0827 3.8645 22.0585L7.5715 21.2018C7.82178 21.147 8.08332 21.1803 8.31185 21.2962C9.64091 21.9488 11.1024 22.2868 12.583 22.284Z"
+                            stroke="#49932C"
+                            stroke-width="2.09731"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
+                        </Svg>
+                      </Pressable>
                     )}
                   </View>
                 </View>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    gap: 20,
-                  }}
-                >
-                  {!order ? (
-                    <Skeleton
-                      colorMode="light"
-                      height={44}
-                      width={44}
-                      radius={100}
-                    />
-                  ) : (
-                    <Pressable
-                      style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: "100%",
-                        backgroundColor: "#CCD9F8",
-                        justifyContent: "center",
-                        alignItems: "center",
-                      }}
-                      onPress={() =>
-                        Linking.openURL(`tel:${order.packager.phone_number}`)
-                      }
-                    >
-                      <Svg
-                        width="15"
-                        height="15"
-                        viewBox="0 0 15 15"
-                        fill="none"
-                      >
-                        <Path
-                          d="M2.00816 6.25199L3.9989 4.26124C4.19668 4.06016 4.33657 3.80947 4.40385 3.53556C4.47114 3.26166 4.46331 2.97468 4.38121 2.70485C4.24171 2.24584 4.11846 1.78205 4.01172 1.31434C3.92425 0.904883 3.56456 0.565552 3.14529 0.565552H2.00816C1.17114 0.565552 0.482677 1.24723 0.574673 2.07972C1.27294 8.40787 6.29806 13.4322 12.6255 14.1305C13.4579 14.2225 14.1396 13.5348 14.1396 12.6978V11.5591C14.1396 11.1414 13.7988 10.7975 13.3871 10.7221C12.9345 10.6341 12.4878 10.5185 12.0493 10.376C11.471 10.192 10.8285 10.3217 10.3994 10.75L8.45319 12.697"
-                          stroke="#100152"
-                          stroke-width="1.1311"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        />
-                      </Svg>
-                    </Pressable>
-                  )}
-                  {!order ? (
-                    <Skeleton
-                      colorMode="light"
-                      height={44}
-                      width={44}
-                      radius={100}
-                    />
-                  ) : (
-                    <Pressable
-                      style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: "100%",
-                        backgroundColor: "#E0FAD5",
-                        justifyContent: "center",
-                        alignItems: "center",
-                      }}
-                      onPress={() => setPChat(true)}
-                    >
-                      <Svg
-                        width="26"
-                        height="26"
-                        viewBox="0 0 26 26"
-                        fill="none"
-                      >
-                        <Path
-                          d="M8.35694 10.3671H16.8091M8.35694 14.8008H14.3846M12.583 22.284C14.6902 22.2835 16.7399 21.597 18.4221 20.3281C20.1044 19.0592 21.3277 17.277 21.9071 15.2511C22.4865 13.2251 22.3904 11.0656 21.6334 9.09913C20.8764 7.13265 19.4997 5.46615 17.7114 4.35167C15.9231 3.23718 13.8205 2.73533 11.7216 2.922C9.62274 3.10867 7.64173 3.97372 6.07819 5.38632C4.51465 6.79891 3.45361 8.68223 3.05553 10.7514C2.65746 12.8207 2.94401 14.9632 3.87184 16.8551C3.98509 17.0858 4.02285 17.3459 3.96517 17.5955L3.10947 21.3035C3.08534 21.4076 3.08811 21.5161 3.11751 21.6187C3.14691 21.7214 3.20196 21.815 3.2775 21.8905C3.35303 21.966 3.44655 22.0211 3.54925 22.0505C3.65195 22.0799 3.76044 22.0827 3.8645 22.0585L7.5715 21.2018C7.82178 21.147 8.08332 21.1803 8.31185 21.2962C9.64091 21.9488 11.1024 22.2868 12.583 22.284Z"
-                          stroke="#49932C"
-                          stroke-width="2.09731"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        />
-                      </Svg>
-                    </Pressable>
-                  )}
-                </View>
-              </View>
+              )}
 
               <View
                 style={{
@@ -872,9 +958,13 @@ export default function TripDetails() {
                         backgroundColor: "#CCD9F8",
                         justifyContent: "center",
                         alignItems: "center",
+                        opacity: order?.status == "completed" ? 0.4 : 1,
                       }}
-                      onPress={() =>
-                        Linking.openURL(`tel:${order.user.phone_number}`)
+                      onPress={
+                        order?.status == "completed"
+                          ? () => {}
+                          : () =>
+                              Linking.openURL(`tel:${order.user.phone_number}`)
                       }
                     >
                       <Svg
@@ -909,8 +999,13 @@ export default function TripDetails() {
                         backgroundColor: "#E0FAD5",
                         justifyContent: "center",
                         alignItems: "center",
+                        opacity: order?.status == "completed" ? 0.4 : 1,
                       }}
-                      onPress={() => setCChat(true)}
+                      onPress={
+                        order?.status == "completed"
+                          ? () => {}
+                          : () => setCChat(true)
+                      }
                     >
                       <Svg
                         width="26"
@@ -1071,22 +1166,40 @@ export default function TripDetails() {
                           )}
                         </Pressable>
                         <Pressable
-                          onPress={() => router.back()}
+                          onPress={
+                            order.type == "marketplace"
+                              ? () => router.back()
+                              : declineOrder
+                          }
                           style={{
                             paddingVertical: 10,
                             paddingHorizontal: 15,
                             backgroundColor: "#EAEAEA",
                             borderRadius: 8,
+                            opacity: decling ? 0.5 : 1,
                           }}
                         >
-                          <Text
-                            style={{
-                              fontFamily: "HostGroteskBold",
-                              fontSize: 14,
-                            }}
-                          >
-                            Decline Trip
-                          </Text>
+                          {decling ? (
+                            <ScalingDots
+                              dotCount={3}
+                              dotSize={6}
+                              dotColor="#999"
+                              speed={300}
+                              style={{
+                                marginVertical: 5,
+                              }}
+                              scaleRange={[1, 1.5]}
+                            />
+                          ) : (
+                            <Text
+                              style={{
+                                fontFamily: "HostGroteskBold",
+                                fontSize: 14,
+                              }}
+                            >
+                              Decline Trip
+                            </Text>
+                          )}
                         </Pressable>
                       </>
                     ) : ["cancelled", "completed"].includes(
@@ -1161,29 +1274,17 @@ export default function TripDetails() {
                       }}
                       provider="google"
                       overrideUserInterfaceStyle="light"
+                      ref={mapRef}
+                      onMapReady={fitMap}
                       initialRegion={{
-                        latitude: order.pickup_latitude,
-                        longitude: order.pickup_longitude,
+                        ...origin,
                         latitudeDelta: 0.01,
                         longitudeDelta: 0.01,
                       }}
-                      customMapStyle={[
-                        {
-                          elementType: "geometry",
-                          stylers: [{ color: "#1d2c4d" }],
-                        },
-                        {
-                          elementType: "labels.text.fill",
-                          stylers: [{ color: "#8ec3b9" }],
-                        },
-                      ]}
                     >
                       <Marker
-                        coordinate={{
-                          latitude: order.customer_latitude,
-                          longitude: order.customer_longitude,
-                        }}
-                        pinColor="#100152"
+                        coordinate={destination}
+                        // pinColor="#100152"
                         title="Customer"
                       >
                         <View
@@ -1192,7 +1293,7 @@ export default function TripDetails() {
                             gap: 10,
                           }}
                         >
-                          <Text
+                          {/* <Text
                             style={{
                               width: 100,
                               fontFamily: "HostGroteskBold",
@@ -1201,7 +1302,7 @@ export default function TripDetails() {
                             }}
                           >
                             {order.customer_address}
-                          </Text>
+                          </Text> */}
                           <Svg
                             width="16"
                             height="20"
@@ -1216,27 +1317,71 @@ export default function TripDetails() {
                         </View>
                       </Marker>
                       <Marker
-                        coordinate={{
-                          latitude: order.pickup_latitude,
-                          longitude: order.pickup_longitude,
-                        }}
-                        pinColor="#ff0000"
+                        coordinate={origin}
+                        // pinColor="#ff0000"
                         title="Pick Up"
                       >
-                        <SvgXml
+                        {/* <SvgXml
                           xml={locationMarker()}
                           width={106}
                           height={106}
-                        />
+                        /> */}
+                        <Svg
+                          width="16"
+                          height="20"
+                          viewBox="0 0 16 20"
+                          fill="none"
+                        >
+                          <Path
+                            d="M8 10C8.55 10 9.021 9.80433 9.413 9.413C9.805 9.02167 10.0007 8.55067 10 8C9.99933 7.44933 9.80367 6.97867 9.413 6.588C9.02233 6.19733 8.55133 6.00133 8 6C7.44867 5.99867 6.978 6.19467 6.588 6.588C6.198 6.98133 6.002 7.452 6 8C5.998 8.548 6.194 9.019 6.588 9.413C6.982 9.807 7.45267 10.0027 8 10ZM8 20C5.31667 17.7167 3.31267 15.596 1.988 13.638C0.663333 11.68 0.000666667 9.86733 0 8.2C0 5.7 0.804333 3.70833 2.413 2.225C4.02167 0.741667 5.884 0 8 0C10.116 0 11.9787 0.741667 13.588 2.225C15.1973 3.70833 16.0013 5.7 16 8.2C16 9.86667 15.3377 11.6793 14.013 13.638C12.6883 15.5967 10.684 17.7173 8 20Z"
+                            fill="#0800ff"
+                          />
+                        </Svg>
                       </Marker>
-                      <Polyline
-                        coordinates={routeCoords}
-                        strokeWidth={3}
-                        strokeColor="blue"
-                      />
+                      {routeCoords && (
+                        <Polyline
+                          coordinates={routeCoords}
+                          strokeWidth={6}
+                          strokeColor="blue"
+                        />
+                      )}
                     </MapView>
                   </View>
                 </View>
+                {order && (
+                  <Pressable
+                    style={{
+                      backgroundColor: "#100152",
+                      padding: 20,
+                      paddingHorizontal: 60,
+                      borderRadius: 10,
+                      marginTop: 20,
+                      width: "100%",
+                      alignItems: "center",
+                    }}
+                    onPress={() => {
+                      // console.log("order details", order);
+                      router.push({
+                        pathname: "/account/dashboard/track-ride",
+                        params: {
+                          ...order,
+                        },
+                      });
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#fff",
+                        fontWeight: 500,
+                        fontFamily: "HostGroteskBold",
+                        width: "100%",
+                        textAlign: "center",
+                      }}
+                    >
+                      GO TO CUSTOMER
+                    </Text>
+                  </Pressable>
+                )}
               </>
             )}
           </View>

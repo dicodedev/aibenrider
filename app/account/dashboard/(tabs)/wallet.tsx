@@ -14,7 +14,8 @@ const colors = ["#FFE4C3", "#E0FAD5", "#FFD0DA", "#D4E0FF"];
 import { appService } from "@/api/appService";
 import ProfilePicture from "@/assets/images/account/profile-picture.png";
 import { NoDataFound } from "@/components/account/no-data-found";
-import { Capitalize } from "@/utils/helper";
+import { Capitalize, formatAmount } from "@/utils/helper";
+import { useQuery } from "@tanstack/react-query";
 import { format, isToday } from "date-fns";
 import { Skeleton } from "moti/skeleton";
 
@@ -105,9 +106,6 @@ const options = [
 export default function Wallet() {
   const app = useSelector((state: any) => state.app);
   const user = app.user;
-  const [search, setSearch] = useState("");
-
-  const [transactions, setTransactions] = useState(null);
 
   const [stats, setStats] = useState(null);
 
@@ -117,12 +115,10 @@ export default function Wallet() {
     setStats(res);
   };
 
-  const fetchTransactions = async () => {
-    const res = await appService.getSomeTransactions();
-
-    console.log("res data", res.data);
-    setTransactions(res.data);
-  };
+  const { isLoading, data: transactions } = useQuery({
+    queryKey: ["getSomeTransactions"],
+    queryFn: appService.getSomeTransactions,
+  });
 
   const formatMessageDate = (date) => {
     const d = new Date(date);
@@ -135,7 +131,6 @@ export default function Wallet() {
   };
 
   useEffect(() => {
-    fetchTransactions();
     fetchStats();
   }, []);
   return (
@@ -155,6 +150,7 @@ export default function Wallet() {
             padding: 0,
             height: "100%",
           }}
+          showsVerticalScrollIndicator={false}
         >
           <View
             style={{
@@ -274,7 +270,7 @@ export default function Wallet() {
                   }}
                 >
                   {stats ? (
-                    "₦" + stats.total_earnings
+                    "₦" + formatAmount(Number(stats.total_earnings))
                   ) : (
                     <Skeleton
                       colorMode="light"
@@ -310,7 +306,7 @@ export default function Wallet() {
                   }}
                 >
                   {stats ? (
-                    stats.trips
+                    formatAmount(Number(stats.trips))
                   ) : (
                     <Skeleton
                       colorMode="light"
@@ -342,9 +338,11 @@ export default function Wallet() {
                     fontFamily: "HostGroteskBold",
                     fontSize: 23,
                   }}
+                  numberOfLines={1}
                 >
                   {stats ? (
-                    stats.distance_covered + " km"
+                    formatAmount(Number(stats.distance_covered).toFixed(1)) +
+                    "km"
                   ) : (
                     <Skeleton
                       colorMode="light"
@@ -385,7 +383,7 @@ export default function Wallet() {
             >
               Transactions
             </Text>
-            {transactions && transactions.length && (
+            {transactions && transactions.data.length && (
               <Pressable
                 onPress={() => router.push("/account/wallet/transactions")}
               >
@@ -408,14 +406,14 @@ export default function Wallet() {
             }}
           >
             {transactions ? (
-              transactions.length ? (
-                transactions.map((item, key) => (
+              transactions.data.length ? (
+                transactions.data.map((item, key) => (
                   <View
                     style={{
                       flexDirection: "row",
                       justifyContent: "space-between",
                       paddingVertical: 10,
-                      paddingRight: 20,
+                      paddingRight: 10,
                       flex: 1,
                     }}
                     key={key}
@@ -487,7 +485,8 @@ export default function Wallet() {
                           marginBottom: 3,
                         }}
                       >
-                        + ₦{Number(item.amount).toLocaleString()}
+                        {item.kind == "debit" ? "-" : "+"} ₦
+                        {Number(item.amount).toLocaleString()}
                       </Text>
                       <Text
                         style={{
