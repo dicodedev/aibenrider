@@ -16,6 +16,7 @@ import * as Clipboard from "expo-clipboard";
 import { Skeleton } from "moti/skeleton";
 
 import ProfilePicture from "@/assets/images/account/profile-picture.png";
+import { formatAmount } from "@/utils/helper";
 import { format } from "date-fns";
 
 const options = ["Referrals", "Total Commissions"];
@@ -32,7 +33,7 @@ export default function Index() {
 
   const fetchStats = async () => {
     const res = await appService.getReferralStats();
-    console.log("stats", res);
+    // console.log("stats", res);
     setStats(res);
   };
 
@@ -82,12 +83,7 @@ export default function Index() {
         }}
         edges={["left", "right", "top"]}
       >
-        <ScrollView
-          style={{
-            flex: 1,
-          }}
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView style={{}} showsVerticalScrollIndicator={false}>
           <View
             style={{
               flexDirection: "row",
@@ -332,7 +328,7 @@ export default function Index() {
               ))}
             </View>
 
-         
+            {/* EARNINGS */}
             <View
               style={{
                 flexDirection: "row",
@@ -350,7 +346,7 @@ export default function Index() {
               >
                 Referrals
               </Text>
-              {referrals && referrals.length && (
+              {referrals && referrals.length ? (
                 <Pressable
                   onPress={() => router.push("/account/promotions/earnings")}
                 >
@@ -364,6 +360,8 @@ export default function Index() {
                     See All
                   </Text>
                 </Pressable>
+              ) : (
+                <></>
               )}
             </View>
             <View
@@ -450,7 +448,7 @@ export default function Index() {
                           fontFamily: "HostGroteskBold",
                         }}
                       >
-                        {item.orders_count} Orders
+                        {formatAmount(item.orders_count)} Orders
                       </Text>
                     </View>
                   ))

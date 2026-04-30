@@ -1,5 +1,7 @@
 import Svg, { Path } from "react-native-svg";
 
+export const WEBSOCKET_URL = "wss://socket.aibenmart.com/ws";
+
 export const sOptions = [
   {
     icon: (

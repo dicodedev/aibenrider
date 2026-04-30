@@ -27,6 +27,26 @@ export const authService = {
     return res.data;
   },
 
+  resetPassword: async (payload: {
+    token: string;
+    password: string;
+    password_confirmation: string;
+  }) => {
+    const res = await api.post(`/set-password/${payload.token}`, payload);
+    return res.data;
+  },
+
+  verifyPasswordOtp: async (payload: { code: string }) => {
+    const res = await api.post("verify-password-otp", payload);
+    return res.data;
+  },
+
+  forget: async (payload: { email: string }) => {
+    const res = await api.post("/forget-password", payload);
+
+    return res.data;
+  },
+
   setPassword: async (payload: { access_code: string; password: string }) => {
     const res = await api.post("/set-rider-password", payload);
     return res.data;

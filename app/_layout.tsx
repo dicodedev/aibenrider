@@ -147,12 +147,21 @@ export default function RootLayout() {
                   options={{ headerShown: false }}
                 />
                 <Stack.Screen name="login" options={{ headerShown: false }} />
+                <Stack.Screen name="forget" options={{ headerShown: false }} />
                 <Stack.Screen
                   name="set-password"
                   options={{ headerShown: false }}
                 />
                 <Stack.Screen
+                  name="password-otp"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
                   name="complete-profile"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="reset-password"
                   options={{ headerShown: false }}
                 />
                 <Stack.Screen

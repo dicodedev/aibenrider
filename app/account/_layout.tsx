@@ -25,7 +25,7 @@ import { useCurrentLocation } from "@/hooks/use-current-location";
 import { appSlice } from "@/store/appSlice";
 import NetInfo from "@react-native-community/netinfo";
 
-import { getUserData, storeUserData } from "@/utils/secureStore";
+import { getLocation, getUserData, storeLocation, storeUserData } from "@/utils/secureStore";
 import { useQuery } from "@tanstack/react-query";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
@@ -107,14 +107,38 @@ export default function AccountLayout() {
   // console.log("cords", coords);
 
   useEffect(() => {
-    const setCordinates = async () => {
-      await appService.setCurrentCordinates({
-        longitude: coords.longitude.toString(),
-        latitude: coords.latitude.toString(),
-      });
+    const getCurrentLocation = async () => {
+      const location = await getLocation();
+
+      if (!location) return;
+
+      dispatch(
+        appSlice.actions.setCordinates({
+          address: location.address,
+          longitude: location.longitude,
+          latitude: location.latitude,
+        }),
+      );
     };
-    coords && setCordinates();
-  }, [address]);
+    getCurrentLocation();
+
+    const setCordinates = async () => {
+      await storeLocation({
+        address: address,
+        longitude: coords.longitude,
+        latitude: coords.latitude,
+      });
+
+      dispatch(
+        appSlice.actions.setCordinates({
+          address: address,
+          longitude: coords.longitude,
+          latitude: coords.latitude,
+        }),
+      );
+    };
+    coords && address && setCordinates();
+  }, [coords, address]);
 
   useEffect(() => {
     if (!app.pushToken) return;

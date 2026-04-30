@@ -28,7 +28,9 @@ import { Capitalize } from "@/utils/helper";
 import { Modal } from "react-native";
 import Toast from "react-native-toast-message";
 
+import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
+import { format } from "date-fns";
 import MapView, { Marker, Polyline } from "react-native-maps";
 
 export default function TripDetails() {
@@ -57,6 +59,8 @@ export default function TripDetails() {
   const [packagerChats, setPackagerChats] = useState(null);
   const [customerChats, setCustomerChats] = useState(null);
   const [routeCoords, setRouteCoords] = useState(null);
+
+  const queryClient = useQueryClient();
 
   const mapRef = useRef(null);
 
@@ -210,7 +214,7 @@ export default function TripDetails() {
   }, [order]);
 
   useEffect(() => {
-    console.log("routeCoords", routeCoords);
+    console.log("routeCoords", origin);
   }, [, routeCoords]);
 
   const accept = async () => {
@@ -220,6 +224,11 @@ export default function TripDetails() {
       await appService.acceptOrder(order.id);
 
       setAccepted(true);
+      setOrder((prev) => ({ ...prev, rider_id: user.id, rider: user }));
+
+      ["getPendingRequests", "getRecentRequests"].forEach((key) => {
+        queryClient.invalidateQueries({ queryKey: [key] });
+      });
     } catch (error: any) {
       console.log("error", error);
 
@@ -243,6 +252,17 @@ export default function TripDetails() {
       await appService.updateOrder(order.id, "completed");
 
       setCompleted(true);
+
+      setOrder((prev) => ({
+        ...prev,
+        completed: 1,
+        status: "completed",
+        full_status: "completed",
+      }));
+
+      ["getPendingRequests", "getRecentRequests"].forEach((key) => {
+        queryClient.invalidateQueries({ queryKey: [key] });
+      });
     } catch (error: any) {
       console.log("error", error);
 
@@ -264,6 +284,10 @@ export default function TripDetails() {
       setDecling(true);
 
       await appService.declineOrder(order.id);
+
+      ["getPendingRequests", "getRecentRequests"].forEach((key) => {
+        queryClient.invalidateQueries({ queryKey: [key] });
+      });
 
       router.back();
     } catch (error: any) {
@@ -305,6 +329,7 @@ export default function TripDetails() {
     order && order.packager && getPackagerChat();
     getCustomerChat();
   }, [order]);
+
   return (
     <View
       style={{
@@ -313,15 +338,17 @@ export default function TripDetails() {
     >
       {/* {call && <Call setCall={setCall} />} */}
 
-      {order && showDirection && (
+      {order && showDirection ? (
         <Direction
           order={order}
           visible={showDirection}
           setVisible={setShowDirection}
         />
+      ) : (
+        <></>
       )}
 
-      {order && customerChats && cChat && (
+      {order && customerChats && cChat ? (
         <Chat
           rider={user}
           roomId={`chat_${customerChats?.chat.id}`}
@@ -330,8 +357,10 @@ export default function TripDetails() {
           data={customerChats?.messages}
           setVisible={setCChat}
         />
+      ) : (
+        <></>
       )}
-      {order && packagerChats && pChat && (
+      {order && packagerChats && pChat ? (
         <Chat
           rider={user}
           roomId={`chat_${packagerChats?.chat.id}`}
@@ -340,69 +369,75 @@ export default function TripDetails() {
           data={packagerChats?.messages}
           setVisible={setPChat}
         />
+      ) : (
+        <></>
       )}
 
-      {order && (
+      {order ? (
         <CancelRide
           setCancelled={setCancelled}
           visible={cancel}
           setVisible={setCancel}
           data={order}
         />
+      ) : (
+        <></>
       )}
 
       {order &&
-        order.rider &&
-        !["completed", "cancelled"].includes(order.full_status) &&
-        order.paid && (
-          <View
+      order.rider &&
+      !["completed", "cancelled"].includes(order.full_status) &&
+      order.paid ? (
+        <View
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            backgroundColor: "#fff",
+            width: "100%",
+            paddingVertical: 20,
+            paddingHorizontal: 15,
+            zIndex: 1000,
+          }}
+        >
+          <Pressable
+            onPress={completing ? () => {} : completeOrder}
             style={{
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              backgroundColor: "#fff",
               width: "100%",
+              backgroundColor: "#100152",
               paddingVertical: 20,
-              paddingHorizontal: 15,
-              zIndex: 1000,
+              borderRadius: 12,
+              opacity: completing ? 0.5 : 1,
             }}
           >
-            <Pressable
-              onPress={completing ? () => {} : completeOrder}
-              style={{
-                width: "100%",
-                backgroundColor: "#100152",
-                paddingVertical: 20,
-                borderRadius: 12,
-                opacity: completing ? 0.5 : 1,
-              }}
-            >
-              {completing ? (
-                <ScalingDots
-                  dotCount={3}
-                  dotSize={8}
-                  dotColor="#ffffff"
-                  speed={300}
-                  style={{
-                    marginVertical: 5,
-                  }}
-                  scaleRange={[1, 1.5]}
-                />
-              ) : (
-                <Text
-                  style={{
-                    color: "#fff",
-                    textAlign: "center",
-                    fontFamily: "HostGroteskBold",
-                    fontSize: 16,
-                  }}
-                >
-                  COMPLETE TRIP
-                </Text>
-              )}
-            </Pressable>
-          </View>
-        )}
+            {completing ? (
+              <ScalingDots
+                dotCount={3}
+                dotSize={8}
+                dotColor="#ffffff"
+                speed={300}
+                style={{
+                  marginVertical: 5,
+                }}
+                scaleRange={[1, 1.5]}
+              />
+            ) : (
+              <Text
+                style={{
+                  color: "#fff",
+                  textAlign: "center",
+                  fontFamily: "HostGroteskBold",
+                  fontSize: 16,
+                }}
+              >
+                COMPLETE TRIP
+              </Text>
+            )}
+          </Pressable>
+        </View>
+      ) : (
+        <></>
+      )}
 
       <CustomModal
         setVisible={setCancelled}
@@ -569,7 +604,7 @@ export default function TripDetails() {
                   </Text>
                 )}
               </View>
-              {order && order.packager && (
+              {order && order.packager ? (
                 <View
                   style={{
                     flexDirection: "row",
@@ -746,6 +781,117 @@ export default function TripDetails() {
                     )}
                   </View>
                 </View>
+              ) : (
+                <></>
+              )}
+
+              {order && order.items[0]?.data?.datetime ? (
+                <View
+                  style={{
+                    marginTop: 30,
+                  }}
+                >
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      gap: 15,
+                      alignItems: "center",
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 40,
+                        height: 40,
+                        backgroundColor: "#CCD9F8",
+                        borderRadius: "100%",
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Svg
+                        width="15"
+                        height="15"
+                        viewBox="0 0 15 15"
+                        fill="none"
+                      >
+                        <Path
+                          d="M12.4516 1.4649H10.9867V0.732448C10.9867 0.538191 10.9096 0.35189 10.7722 0.214529C10.6348 0.0771684 10.4485 0 10.2543 0C10.06 0 9.87371 0.0771684 9.73635 0.214529C9.59899 0.35189 9.52182 0.538191 9.52182 0.732448V1.4649H5.12714V0.732448C5.12714 0.538191 5.04997 0.35189 4.91261 0.214529C4.77525 0.0771684 4.58895 0 4.39469 0C4.20043 0 4.01413 0.0771684 3.87677 0.214529C3.73941 0.35189 3.66224 0.538191 3.66224 0.732448V1.4649H2.19734C1.61457 1.4649 1.05567 1.6964 0.643587 2.10848C0.231505 2.52057 0 3.07947 0 3.66224V12.4516C0 13.0344 0.231505 13.5933 0.643587 14.0054C1.05567 14.4175 1.61457 14.649 2.19734 14.649H12.4516C13.0344 14.649 13.5933 14.4175 14.0054 14.0054C14.4175 13.5933 14.649 13.0344 14.649 12.4516V3.66224C14.649 3.07947 14.4175 2.52057 14.0054 2.10848C13.5933 1.6964 13.0344 1.4649 12.4516 1.4649ZM13.1841 12.4516C13.1841 12.6459 13.1069 12.8322 12.9695 12.9695C12.8322 13.1069 12.6459 13.1841 12.4516 13.1841H2.19734C2.00309 13.1841 1.81679 13.1069 1.67943 12.9695C1.54206 12.8322 1.4649 12.6459 1.4649 12.4516V7.32448H13.1841V12.4516ZM13.1841 5.85958H1.4649V3.66224C1.4649 3.46798 1.54206 3.28168 1.67943 3.14432C1.81679 3.00696 2.00309 2.92979 2.19734 2.92979H3.66224V3.66224C3.66224 3.8565 3.73941 4.0428 3.87677 4.18016C4.01413 4.31752 4.20043 4.39469 4.39469 4.39469C4.58895 4.39469 4.77525 4.31752 4.91261 4.18016C5.04997 4.0428 5.12714 3.8565 5.12714 3.66224V2.92979H9.52182V3.66224C9.52182 3.8565 9.59899 4.0428 9.73635 4.18016C9.87371 4.31752 10.06 4.39469 10.2543 4.39469C10.4485 4.39469 10.6348 4.31752 10.7722 4.18016C10.9096 4.0428 10.9867 3.8565 10.9867 3.66224V2.92979H12.4516C12.6459 2.92979 12.8322 3.00696 12.9695 3.14432C13.1069 3.28168 13.1841 3.46798 13.1841 3.66224V5.85958Z"
+                          fill="#100152"
+                        />
+                      </Svg>
+                    </View>
+                    <Text
+                      style={{
+                        fontFamily: "HostGroteskBold",
+                        fontSize: 18,
+                      }}
+                    >
+                      Delivery Schedule
+                    </Text>
+                  </View>
+                  <Text
+                    style={{
+                      fontFamily: "HostGrotesk",
+                      fontSize: 12,
+                      marginTop: 4,
+                      color: "#686868",
+                    }}
+                  >
+                    Below are the pickup date and time for delivery
+                  </Text>
+                  <View
+                    style={{
+                      marginTop: 15,
+                      flexDirection: "row",
+                      gap: 20,
+                    }}
+                  >
+                    <View
+                      style={{
+                        backgroundColor: "#EAEAEA",
+                        borderWidth: 1,
+                        borderColor: "#E3E3E3",
+                        padding: 10,
+                        paddingHorizontal: 15,
+                        alignSelf: "flex-start",
+                        borderRadius: 10,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontFamily: "HostGroteskBold",
+                          fontSize: 18,
+                        }}
+                      >
+                        {order &&
+                          format(order.items[0].data.datetime, "d MMM yyyy")}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        backgroundColor: "#EAEAEA",
+                        borderWidth: 1,
+                        borderColor: "#E3E3E3",
+                        padding: 10,
+                        paddingHorizontal: 15,
+                        alignSelf: "flex-start",
+                        borderRadius: 10,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontFamily: "HostGroteskBold",
+                          fontSize: 18,
+                        }}
+                      >
+                        {order &&
+                          format(order.items[0].data.datetime, "hh:mm a")}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              ) : (
+                <></>
               )}
 
               <View
@@ -940,6 +1086,7 @@ export default function TripDetails() {
                   style={{
                     flexDirection: "row",
                     gap: 20,
+                    marginBottom: !order ? 20 : 0,
                   }}
                 >
                   {!order ? (
@@ -1026,7 +1173,7 @@ export default function TripDetails() {
                 </View>
               </View>
 
-              {order && (
+              {order ? (
                 <>
                   <View
                     style={{
@@ -1230,9 +1377,11 @@ export default function TripDetails() {
                     )}
                   </View>
                 </>
+              ) : (
+                <></>
               )}
             </View>
-            {order && order.customer_latitude && order?.pickup_latitude && (
+            {order && order.customer_latitude && order?.pickup_latitude ? (
               <>
                 <View
                   style={{
@@ -1338,17 +1487,19 @@ export default function TripDetails() {
                           />
                         </Svg>
                       </Marker>
-                      {routeCoords && (
+                      {routeCoords ? (
                         <Polyline
                           coordinates={routeCoords}
                           strokeWidth={6}
                           strokeColor="blue"
                         />
+                      ) : (
+                        <></>
                       )}
                     </MapView>
                   </View>
                 </View>
-                {order && (
+                {order ? (
                   <Pressable
                     style={{
                       backgroundColor: "#100152",
@@ -1381,8 +1532,12 @@ export default function TripDetails() {
                       GO TO CUSTOMER
                     </Text>
                   </Pressable>
+                ) : (
+                  <></>
                 )}
               </>
+            ) : (
+              <></>
             )}
           </View>
         </ScrollView>
@@ -1433,6 +1588,8 @@ const CancelRide = ({
   const [cancelReason, setCancelReason] = useState("");
   const [sending, setSending] = useState(false);
 
+  const queryClient = useQueryClient();
+
   const submit = async () => {
     try {
       if (cancelReason == "") return;
@@ -1441,6 +1598,10 @@ const CancelRide = ({
 
       await appService.cancelOrder(data.id, {
         status_reason: cancelReason,
+      });
+
+      ["getPendingRequests", "getRecentRequests"].forEach((key) => {
+        queryClient.invalidateQueries({ queryKey: [key] });
       });
 
       setCancelled(true);

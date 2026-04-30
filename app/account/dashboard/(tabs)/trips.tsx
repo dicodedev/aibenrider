@@ -72,10 +72,19 @@ export default function Trips() {
           <View
             style={{
               flexDirection: "row",
-              justifyContent: "flex-end",
+              gap: 10,
+              alignItems: "center",
               marginBottom: 10,
             }}
           >
+            <Text
+              style={{
+                fontSize: 16,
+                fontFamily: "HostGroteskBold",
+              }}
+            >
+              Sort trips by
+            </Text>
             <View
               style={{
                 position: "relative",
@@ -127,16 +136,45 @@ export default function Trips() {
                     </Text>
                   </View>
                 ) : (
-                  <Text
+                  <View
                     style={{
-                      fontSize: 14,
-                      fontFamily: "HostGroteskBold",
-                      paddingVertical: 5,
-                      paddingHorizontal: 6,
+                      flexDirection: "row",
                     }}
                   >
-                    All Trips
-                  </Text>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        paddingLeft: 10,
+                      }}
+                    >
+                      {Object.entries(requestCardConfig).map(([key, value]) => (
+                        <View
+                          style={{
+                            width: 31,
+                            height: 31,
+                            borderRadius: "100%",
+                            backgroundColor:
+                              requestCardConfig[key].transparentBackground,
+                            justifyContent: "center",
+                            alignItems: "center",
+                            marginLeft: -20,
+                          }}
+                        >
+                          {requestCardConfig[key].icon}
+                        </View>
+                      ))}
+                    </View>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontFamily: "HostGroteskBold",
+                        paddingVertical: 5,
+                        paddingHorizontal: 6,
+                      }}
+                    >
+                      All Trips
+                    </Text>
+                  </View>
                 )}
                 <Svg width="17" height="10" viewBox="0 0 17 10" fill="none">
                   <Path
@@ -156,31 +194,62 @@ export default function Trips() {
                     zIndex: 10000,
                   }}
                 >
-                  <Pressable
-                    onPress={() => {
-                      setSelected(null);
-                      setShow(false);
-                    }}
-                    style={{
-                      backgroundColor: "#fff",
-                      flexDirection: "row",
-                      padding: 10,
-                      paddingHorizontal: 15,
-                      gap: 10,
-                      alignItems: "center",
-                      borderRadius: 12,
-                    }}
-                  >
-                    <Text
+                  {selected ? (
+                    <Pressable
+                      onPress={() => {
+                        setSelected(null);
+                        setShow(false);
+                      }}
                       style={{
-                        fontSize: 14,
-                        fontFamily: "HostGroteskBold",
-                        paddingTop: 6,
+                        backgroundColor: "#fff",
+                        flexDirection: "row",
+                        padding: 10,
+                        paddingHorizontal: 15,
+                        gap: 1,
+                        alignItems: "center",
+                        borderRadius: 12,
                       }}
                     >
-                      See All Trips
-                    </Text>
-                  </Pressable>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          paddingLeft: 20,
+                        }}
+                      >
+                        {Object.entries(requestCardConfig).map(
+                          ([key, value]) => (
+                            <View
+                              style={{
+                                width: 31,
+                                height: 31,
+                                borderRadius: "100%",
+                                backgroundColor:
+                                  requestCardConfig[key].transparentBackground,
+                                justifyContent: "center",
+                                alignItems: "center",
+                                marginLeft: -20,
+                              }}
+                            >
+                              {requestCardConfig[key].icon}
+                            </View>
+                          ),
+                        )}
+                      </View>
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          fontFamily: "HostGroteskBold",
+                          paddingVertical: 5,
+                          paddingHorizontal: 6,
+                        }}
+                      >
+                        All Trips
+                      </Text>
+                    </Pressable>
+                  ) : (
+                    <></>
+                  )}
+
                   {Object.keys(requestCardConfig).map(
                     (item, key) =>
                       selected?.text !== requestCardConfig[item].text && (
@@ -233,7 +302,7 @@ export default function Trips() {
               flexDirection: "row",
               gap: 30,
               marginBottom: 5,
-              marginTop: 10,
+              marginTop: 20,
             }}
           >
             {options.map((item, key) => (
@@ -262,9 +331,17 @@ export default function Trips() {
             ))}
           </View>
           {section ? (
-            <Completed filter={selected ? selected.ident : null} />
+            <Completed
+              latitude={app.latitude}
+              longitude={app.longitude}
+              filter={selected ? selected.ident : null}
+            />
           ) : (
-            <Pending filter={selected ? selected.ident : null} />
+            <Pending
+              latitude={app.latitude}
+              longitude={app.longitude}
+              filter={selected ? selected.ident : null}
+            />
           )}
         </View>
       </SafeAreaView>
@@ -272,14 +349,24 @@ export default function Trips() {
   );
 }
 
-const Pending = ({ filter }: { filter: string }) => {
+const Pending = ({
+  filter,
+  latitude,
+  longitude,
+}: {
+  filter: string;
+  latitude: string;
+  longitude: string;
+}) => {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteQuery({
-      queryKey: ["getPendingRequests", filter],
+      queryKey: ["getPendingRequests", filter, latitude, longitude],
       queryFn: ({ pageParam = 1 }) => {
         return appService.getRequests({
           filter,
           pageParam,
+          latitude,
+          longitude,
         });
       },
       getNextPageParam: (lastPage) => {
@@ -360,14 +447,24 @@ const Pending = ({ filter }: { filter: string }) => {
   );
 };
 
-const Completed = ({ filter }: { filter: string }) => {
+const Completed = ({
+  filter,
+  latitude,
+  longitude,
+}: {
+  filter: string;
+  latitude: string;
+  longitude: string;
+}) => {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteQuery({
-      queryKey: ["getCompletedRequests", filter],
+      queryKey: ["getCompletedRequests", filter, latitude, longitude],
       queryFn: ({ pageParam = 1 }) => {
         return appService.getCompletedRequests({
           filter,
           pageParam,
+          latitude,
+          longitude,
         });
       },
       getNextPageParam: (lastPage) => {

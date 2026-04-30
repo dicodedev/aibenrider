@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { FontAwesome } from "@expo/vector-icons";
-import { SvgXml } from "react-native-svg";
+import Svg, { Circle, Path, SvgXml } from "react-native-svg";
 
 import { authService } from "@/api/authService";
 
@@ -12,29 +12,39 @@ import Toast from "react-native-toast-message";
 
 import { useDispatch } from "react-redux";
 
+import { CustomModal } from "@/components/custom-modal";
 import { InputError } from "@/components/input-error";
 import { logo } from "@/icons";
-import { appSlice } from "@/store/appSlice";
+import { saveOnboardedStatus } from "@/utils/mainStore";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Controller, useForm } from "react-hook-form";
 import * as yup from "yup";
 
 const schema = yup.object().shape({
-  email: yup
-    .string()
-    .email("Invalid email")
-    .required("Email address is required"),
   password: yup
     .string()
     .min(6, "Minimum 6 characters")
     .required("Password is required"),
+
+  password_confirmation: yup
+    .string()
+    .oneOf([yup.ref("password"), null], "Passwords must match")
+    .required("Password confirmation is required"),
 });
 
-export default function login() {
+export default function resetPassword() {
   const [visible, setVisible] = useState(false);
 
+  const [showPassword, setShowPassword] = useState(false);
+
+  const [showCPassword, setShowCPassword] = useState(false);
+
   const [loading, setLoading] = useState(false);
+
+  const { token } = useLocalSearchParams<{
+    token: string;
+  }>();
 
   const dispatch = useDispatch();
   const {
@@ -48,25 +58,15 @@ export default function login() {
   const onSubmit = async (data: any) => {
     try {
       setLoading(true);
-      const res = await authService.login(data);
+      await authService.resetPassword({ ...data, token });
 
-      const user = res.data.user;
-      const role = user.roles[0].name;
+      await saveOnboardedStatus("completed");
 
-      if (role === "rider") {
-        dispatch(appSlice.actions.setUser(user));
-        router.replace("/account/dashboard");
-      } else {
-        Toast.show({
-          type: "error",
-          text1: "Unauthorized",
-          text2: "Kindly login with a valid rider account",
-        });
-      }
+      setVisible(true);
     } catch (error: any) {
       Toast.show({
         type: "error",
-        text1: "Failed to login",
+        text1: "Failed to register",
         text2:
           (error.errors !== undefined && error.errors[0]
             ? error.errors[0]
@@ -76,7 +76,6 @@ export default function login() {
       setLoading(false);
     }
   };
-
   return (
     <SafeAreaView
       style={{
@@ -88,6 +87,11 @@ export default function login() {
         paddingBottom: 20,
       }}
     >
+      <CustomModal
+        setVisible={setVisible}
+        visible={visible}
+        content={<SuccessModal setVisible={setVisible} />}
+      />
       <View
         style={{
           flex: 1,
@@ -121,7 +125,7 @@ export default function login() {
               textAlign: "center",
             }}
           >
-            Login Account
+            Set Password
           </Text>
           <Text
             style={{
@@ -133,8 +137,7 @@ export default function login() {
               color: "#888888",
             }}
           >
-            Login to your Aibenmart account in seconds using your email or
-            password.
+            Create a new strong password
           </Text>
 
           <View
@@ -143,29 +146,6 @@ export default function login() {
               marginTop: 20,
             }}
           >
-            <View style={styles.container}>
-              <Controller
-                control={control}
-                name="email"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <TextInput
-                    style={[styles.input, errors.email && styles.errorInput]}
-                    placeholderTextColor={"#A09F9F"}
-                    selectionColor={"#A09F9F"}
-                    placeholder="Email Address"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    textContentType="emailAddress"
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                  />
-                )}
-              />
-
-              {errors.email && <InputError message={errors.email.message} />}
-            </View>
             <View style={styles.container}>
               <View
                 style={{
@@ -179,11 +159,14 @@ export default function login() {
                   name="password"
                   render={({ field: { onChange, onBlur, value } }) => (
                     <TextInput
-                      style={[styles.input, errors.email && styles.errorInput]}
+                      style={[
+                        styles.input,
+                        errors.password && styles.errorInput,
+                      ]}
                       placeholderTextColor={"#A09F9F"}
                       selectionColor={"#A09F9F"}
                       placeholder="Password"
-                      secureTextEntry={!visible}
+                      secureTextEntry={!showPassword}
                       autoCapitalize="none"
                       autoCorrect={false}
                       textContentType="password"
@@ -200,9 +183,9 @@ export default function login() {
                     top: "50%",
                     transform: [{ translateY: -12 }],
                   }}
-                  onPress={() => setVisible(!visible)}
+                  onPress={() => setShowPassword(!showPassword)}
                 >
-                  {!visible ? (
+                  {!showPassword ? (
                     <FontAwesome name="eye-slash" size={20} color="#CCC" />
                   ) : (
                     <FontAwesome name="eye" size={20} color="#CCC" />
@@ -213,25 +196,56 @@ export default function login() {
                 <InputError message={errors.password.message} />
               )}
             </View>
-          </View>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "flex-end",
-              width: "100%",
-            }}
-          >
-            <Pressable onPress={() => router.push("/forget")}>
-              <Text
+            <View style={styles.container}>
+              <View
                 style={{
-                  textAlign: "right",
-                  fontFamily: "HostGroteskBold",
-                  color: "#100152",
+                  flexDirection: "row",
+                  width: "100%",
+                  position: "relative",
                 }}
               >
-                Forget Password?
-              </Text>
-            </Pressable>
+                <Controller
+                  control={control}
+                  name="password_confirmation"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <TextInput
+                      style={[
+                        styles.input,
+                        errors.password && styles.errorInput,
+                      ]}
+                      placeholderTextColor={"#A09F9F"}
+                      selectionColor={"#A09F9F"}
+                      placeholder="Confirm Password"
+                      secureTextEntry={!showCPassword}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      textContentType="password"
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                    />
+                  )}
+                />
+                <Pressable
+                  style={{
+                    position: "absolute",
+                    right: 10,
+                    top: "50%",
+                    transform: [{ translateY: -12 }],
+                  }}
+                  onPress={() => setShowCPassword(!showCPassword)}
+                >
+                  {!showCPassword ? (
+                    <FontAwesome name="eye-slash" size={20} color="#CCC" />
+                  ) : (
+                    <FontAwesome name="eye" size={20} color="#CCC" />
+                  )}
+                </Pressable>
+              </View>
+              {errors.password_confirmation && (
+                <InputError message={errors.password_confirmation.message} />
+              )}
+            </View>
           </View>
           <Pressable
             style={{
@@ -266,15 +280,107 @@ export default function login() {
                   fontFamily: "HostGrotesk",
                 }}
               >
-                LOGIN ACCOUNT
+                PROCEED
               </Text>
             )}
+          </Pressable>
+        </View>
+
+        <View
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            marginTop: 15,
+          }}
+        >
+          <Pressable
+            onPress={() => router.back()}
+            style={{
+              flexDirection: "row",
+              gap: 6,
+              alignItems: "center",
+            }}
+          >
+            <Svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <Path
+                d="M7.99441 12.6576L3.33105 7.99429L7.99441 3.33093"
+                stroke="#4A5565"
+                stroke-width="1.33239"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <Path
+                d="M12.6578 7.99438H3.33105"
+                stroke="#4A5565"
+                stroke-width="1.33239"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </Svg>
+            <Text
+              style={{
+                fontFamily: "HostGrotesk",
+                fontWeight: 500,
+                color: "#4A5565",
+                fontSize: 14,
+                width: 120,
+              }}
+            >
+              Back to Sign In
+            </Text>
           </Pressable>
         </View>
       </View>
     </SafeAreaView>
   );
 }
+
+const SuccessModal = ({ setVisible }) => {
+  useEffect(() => {
+    setTimeout(() => {
+      setVisible(false);
+
+      router.replace("/login");
+    }, 1000);
+  }, []);
+  return (
+    <View
+      style={{
+        backgroundColor: "#fff",
+        width: "70%",
+        borderRadius: 30,
+        padding: 30,
+        gap: 30,
+        alignItems: "center",
+      }}
+    >
+      <Svg width="103" height="103" viewBox="0 0 103 103" fill="none">
+        <Circle cx="51.5" cy="51.5" r="51.5" fill="#E6F5E0" />
+        <Path
+          d="M31.3679 48.1029L41.6165 65.4476L76.0661 41.7638"
+          stroke="#229D27"
+          stroke-width="5.42609"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </Svg>
+
+      <Text
+        style={{
+          color: "#000000",
+          fontFamily: "HostGroteskBold",
+          fontSize: 24,
+          marginBottom: 3,
+          textAlign: "center",
+        }}
+      >
+        Reset Completed
+      </Text>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {

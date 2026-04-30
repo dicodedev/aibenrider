@@ -17,7 +17,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.aibenmart.rider",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "We track your location to update delivery status.",
+        "NSLocationWhenInUseUsageDescription": "We track your location for deliveries."
       },
       "config": {
         "googleMapsApiKey": "AIzaSyC47cBwxu4j3Vu68JAFsDH337FWYt0N8xE"
@@ -43,7 +45,8 @@
         "googleMaps": {
           "apiKey": "AIzaSyC47cBwxu4j3Vu68JAFsDH337FWYt0N8xE"
         }
-      }
+      },
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_BACKGROUND_LOCATION"]
     },
     "web": {
       "output": "static",

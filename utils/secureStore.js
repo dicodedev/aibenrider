@@ -1,8 +1,9 @@
-// import AsyncStorage from "@react-native-async-storage/async-storage";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 
 const TOKEN_KEY = "access_token";
 const USER_KEY = "user";
+const LOCATION_KEY = "location";
 
 export const saveToken = async (token) => {
   try {
@@ -43,6 +44,24 @@ export const storeUserData = async (user) => {
 export const getUserData = async () => {
   try {
     const jsonValue = await AsyncStorage.getItem(USER_KEY);
+    return jsonValue != null ? JSON.parse(jsonValue) : null;
+  } catch (e) {
+    console.log("Error reading data", e);
+  }
+};
+
+export const storeLocation = async (location) => {
+  try {
+    const jsonValue = JSON.stringify(location);
+    await AsyncStorage.setItem(LOCATION_KEY, jsonValue);
+  } catch (e) {
+    console.log("Error saving data", e);
+  }
+};
+
+export const getLocation = async () => {
+  try {
+    const jsonValue = await AsyncStorage.getItem(LOCATION_KEY);
     return jsonValue != null ? JSON.parse(jsonValue) : null;
   } catch (e) {
     console.log("Error reading data", e);

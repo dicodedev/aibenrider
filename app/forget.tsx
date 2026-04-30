@@ -1,9 +1,16 @@
+import { router } from "expo-router";
 import React, { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { FontAwesome } from "@expo/vector-icons";
-import { SvgXml } from "react-native-svg";
+import Svg, { Path, SvgXml } from "react-native-svg";
 
 import { authService } from "@/api/authService";
 
@@ -14,9 +21,7 @@ import { useDispatch } from "react-redux";
 
 import { InputError } from "@/components/input-error";
 import { logo } from "@/icons";
-import { appSlice } from "@/store/appSlice";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { router } from "expo-router";
 import { Controller, useForm } from "react-hook-form";
 import * as yup from "yup";
 
@@ -25,48 +30,41 @@ const schema = yup.object().shape({
     .string()
     .email("Invalid email")
     .required("Email address is required"),
-  password: yup
-    .string()
-    .min(6, "Minimum 6 characters")
-    .required("Password is required"),
 });
 
-export default function login() {
+export default function forget() {
   const [visible, setVisible] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const dispatch = useDispatch();
   const {
     control,
     handleSubmit,
     formState: { errors },
+    watch,
   } = useForm({
     resolver: yupResolver(schema),
   });
 
+  const email = watch("email");
+
   const onSubmit = async (data: any) => {
     try {
       setLoading(true);
-      const res = await authService.login(data);
+      const res = await authService.forget(data);
 
-      const user = res.data.user;
-      const role = user.roles[0].name;
-
-      if (role === "rider") {
-        dispatch(appSlice.actions.setUser(user));
-        router.replace("/account/dashboard");
-      } else {
-        Toast.show({
-          type: "error",
-          text1: "Unauthorized",
-          text2: "Kindly login with a valid rider account",
-        });
-      }
+      router.replace({
+        pathname: "/password-otp",
+        params: {
+          email,
+        },
+      });
     } catch (error: any) {
       Toast.show({
         type: "error",
-        text1: "Failed to login",
+        text1: "Failed to forget",
         text2:
           (error.errors !== undefined && error.errors[0]
             ? error.errors[0]
@@ -121,7 +119,7 @@ export default function login() {
               textAlign: "center",
             }}
           >
-            Login Account
+            Forgot Password
           </Text>
           <Text
             style={{
@@ -133,10 +131,8 @@ export default function login() {
               color: "#888888",
             }}
           >
-            Login to your Aibenmart account in seconds using your email or
-            password.
+            Recover your account access
           </Text>
-
           <View
             style={{
               width: "100%",
@@ -165,85 +161,30 @@ export default function login() {
               />
 
               {errors.email && <InputError message={errors.email.message} />}
-            </View>
-            <View style={styles.container}>
-              <View
-                style={{
-                  flexDirection: "row",
-                  width: "100%",
-                  position: "relative",
-                }}
-              >
-                <Controller
-                  control={control}
-                  name="password"
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <TextInput
-                      style={[styles.input, errors.email && styles.errorInput]}
-                      placeholderTextColor={"#A09F9F"}
-                      selectionColor={"#A09F9F"}
-                      placeholder="Password"
-                      secureTextEntry={!visible}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      textContentType="password"
-                      value={value}
-                      onChangeText={onChange}
-                      onBlur={onBlur}
-                    />
-                  )}
-                />
-                <Pressable
-                  style={{
-                    position: "absolute",
-                    right: 10,
-                    top: "50%",
-                    transform: [{ translateY: -12 }],
-                  }}
-                  onPress={() => setVisible(!visible)}
-                >
-                  {!visible ? (
-                    <FontAwesome name="eye-slash" size={20} color="#CCC" />
-                  ) : (
-                    <FontAwesome name="eye" size={20} color="#CCC" />
-                  )}
-                </Pressable>
-              </View>
-              {errors.password && (
-                <InputError message={errors.password.message} />
-              )}
-            </View>
-          </View>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "flex-end",
-              width: "100%",
-            }}
-          >
-            <Pressable onPress={() => router.push("/forget")}>
               <Text
                 style={{
-                  textAlign: "right",
-                  fontFamily: "HostGroteskBold",
-                  color: "#100152",
+                  fontFamily: "HostGrotesk",
+                  fontWeight: 500,
+                  color: "#6A7282",
+                  fontSize: 12,
+                  marginTop: 6,
                 }}
               >
-                Forget Password?
+                We'll send a verification code to this phone to reset your
+                password.
               </Text>
-            </Pressable>
+            </View>
           </View>
-          <Pressable
+          <TouchableOpacity
             style={{
-              backgroundColor: "#100152",
+              backgroundColor: !email ? "#686868" : "#100152",
               padding: 20,
               paddingHorizontal: 60,
               borderRadius: 10,
               marginTop: 20,
-              display: "flex",
               width: "100%",
               alignItems: "center",
-              opacity: loading ? 0.6 : 1,
+              opacity: loading ? 0.5 : 1,
             }}
             onPress={!loading ? handleSubmit(onSubmit) : () => {}}
           >
@@ -263,13 +204,61 @@ export default function login() {
                 style={{
                   color: "#fff",
                   fontWeight: 500,
-                  fontFamily: "HostGrotesk",
+                  fontFamily: "HostGroteskBold",
+                  width: "100%",
+                  textAlign: "center",
                 }}
               >
-                LOGIN ACCOUNT
+                Send Code
               </Text>
             )}
-          </Pressable>
+          </TouchableOpacity>
+          <View
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              marginTop: 15,
+            }}
+          >
+            <Pressable
+              onPress={() => router.back()}
+              style={{
+                flexDirection: "row",
+                gap: 6,
+                alignItems: "center",
+              }}
+            >
+              <Svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <Path
+                  d="M7.99441 12.6576L3.33105 7.99429L7.99441 3.33093"
+                  stroke="#4A5565"
+                  stroke-width="1.33239"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <Path
+                  d="M12.6578 7.99438H3.33105"
+                  stroke="#4A5565"
+                  stroke-width="1.33239"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </Svg>
+              <Text
+                style={{
+                  fontFamily: "HostGrotesk",
+                  fontWeight: 500,
+                  color: "#4A5565",
+                  fontSize: 14,
+                  width: 120,
+                }}
+              >
+                Back to Sign In
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </SafeAreaView>

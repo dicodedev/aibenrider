@@ -17,6 +17,8 @@ import { useSelector } from "react-redux";
 
 import { appService } from "@/api/appService";
 import ProfilePicture from "@/assets/images/account/profile-picture.png";
+import { NoDataFound } from "@/components/account/no-data-found";
+import { startTracking, stopTracking } from "@/utils/locationService";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function HomeScreen() {
@@ -24,13 +26,14 @@ export default function HomeScreen() {
 
   const data = app.user;
 
-  console.log("status", data?.status);
+  // console.log("status", data?.status);
 
   const queryClient = useQueryClient();
 
   const { isLoading, data: requests } = useQuery({
-    queryKey: ["getRecentRequests"],
-    queryFn: () => appService.getRecentRequests(),
+    queryKey: ["getRecentRequests", app.latitude, app.longitude],
+    queryFn: () => appService.getRecentRequests(app.latitude, app.longitude),
+    enabled: !!app.longitude,
   });
 
   const updateStatus = useMutation({
@@ -49,10 +52,23 @@ export default function HomeScreen() {
         };
       });
 
+      if (payload.status == "online") {
+        await startTracking();
+      } else {
+        await stopTracking();
+      }
+
       return { previousData };
     },
-    onError: (err, payload, context) => {
+    onError: async (err, payload, context) => {
       console.log("error");
+
+      if (payload.status != "online") {
+        await startTracking();
+      } else {
+        await stopTracking();
+      }
+
       if (context?.previousData) {
         queryClient.setQueryData(["getUserDetails"], context.previousData);
       }
@@ -61,6 +77,8 @@ export default function HomeScreen() {
       queryClient.invalidateQueries(["getUserDetails"]);
     },
   });
+
+  // console.log("data", requests.total, requests.data)
 
   return (
     <View style={{ flex: 1 }}>
@@ -217,21 +235,25 @@ export default function HomeScreen() {
               >
                 Available Requests
               </Text>
-              <Pressable
-                onPress={() => router.push("/account/dashboard/trips")}
-              >
-                <Text
-                  style={{
-                    color: "#A09F9F",
-                    fontSize: 16,
-                    fontFamily: "HostGroteskBold",
-                    width: 100,
-                    textAlign: "right",
-                  }}
+              {requests && requests.data.length ? (
+                <Pressable
+                  onPress={() => router.push("/account/dashboard/trips")}
                 >
-                  See All
-                </Text>
-              </Pressable>
+                  <Text
+                    style={{
+                      color: "#A09F9F",
+                      fontSize: 16,
+                      fontFamily: "HostGroteskBold",
+                      width: 100,
+                      textAlign: "right",
+                    }}
+                  >
+                    See All
+                  </Text>
+                </Pressable>
+              ) : (
+                <></>
+              )}
             </View>
           </View>
 
@@ -243,15 +265,21 @@ export default function HomeScreen() {
               gap: 10,
             }}
           >
-            {!isLoading && requests
-              ? requests.data.map((item, key) => (
+            {!isLoading && requests ? (
+              requests.data.length ? (
+                requests.data.map((item, key) => (
                   <RequestCard key={key} loading={false} data={item} />
                 ))
-              : Array(4)
-                  .fill(0)
-                  .map((item, key) => (
-                    <RequestCard data={{}} key={key} loading={true} />
-                  ))}
+              ) : (
+                <NoDataFound text={"No Request Found"} />
+              )
+            ) : (
+              Array(4)
+                .fill(0)
+                .map((item, key) => (
+                  <RequestCard data={{}} key={key} loading={true} />
+                ))
+            )}
           </View>
         </ScrollView>
       </SafeAreaView>

@@ -113,7 +113,7 @@ export default function Transactions() {
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteQuery({
-      queryKey: ["getCompletedRequests"],
+      queryKey: ["getTransactions"],
       queryFn: appService.getTransactions,
       getNextPageParam: (lastPage) => {
         if (!lastPage.next_page_url) return undefined;
@@ -127,7 +127,6 @@ export default function Transactions() {
   // console.log("data", data);
 
   const transactions = data?.pages.flatMap((page) => page.data) ?? [];
-  // console.log("request", requests);
   return (
     <View style={{ flex: 1 }}>
       <GlowBG />
@@ -147,7 +146,7 @@ export default function Transactions() {
               flexDirection: "row",
               alignItems: "center",
               justifyContent: "space-between",
-              marginBottom: 10,
+              marginBottom: 0,
             }}
           >
             <View>
@@ -176,20 +175,21 @@ export default function Transactions() {
           </View>
           <View
             style={{
-              marginTop: 0,
+              marginTop: 5,
+              paddingHorizontal: 0,
               flex: 1,
             }}
           >
             {!isLoading ? (
-              transactions && transactions.length ? (
+              transactions.length ? (
                 <FlatList
                   style={{
                     flex: 1,
                   }}
-                  ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+                  ItemSeparatorComponent={() => <View style={{ height: 0 }} />}
                   data={transactions}
                   showsVerticalScrollIndicator={false}
-                  keyExtractor={(item, index) => index}
+                  keyExtractor={(item, index) => item.id + `_` + index}
                   renderItem={({ item, index }) => (
                     <View
                       style={{
@@ -197,6 +197,8 @@ export default function Transactions() {
                         justifyContent: "space-between",
                         paddingVertical: 10,
                         paddingRight: 0,
+                        flex: 1,
+                        gap: 5,
                       }}
                     >
                       <View
@@ -290,7 +292,7 @@ export default function Transactions() {
                     isFetchingNextPage ? (
                       <View
                         style={{
-                          marginTop: 10,
+                          marginTop: 0,
                         }}
                       >
                         <ScalingDots

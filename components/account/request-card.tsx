@@ -9,6 +9,7 @@ import { requestCardConfig } from "@/constants/app";
 import { useState } from "react";
 import Toast from "react-native-toast-message";
 import ScalingDots from "../scaling-dots";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const RequestCard = ({
   data,
@@ -19,6 +20,8 @@ export const RequestCard = ({
   loading: boolean;
   completed: boolean;
 }) => {
+  const queryClient = useQueryClient();
+
   const [sending, setSending] = useState(false);
   const [accepted, setAccepted] = useState(data.rider_id ? true : false);
 
@@ -29,6 +32,10 @@ export const RequestCard = ({
       await appService.acceptOrder(data.id);
 
       setAccepted(true);
+
+      ["getPendingRequests", "getRecentRequests"].forEach((key) => {
+        queryClient.invalidateQueries({ queryKey: [key] });
+      });
     } catch (error: any) {
       console.log("error", error);
 

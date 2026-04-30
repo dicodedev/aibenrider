@@ -1,23 +1,16 @@
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, SectionList, StyleSheet, Text, View } from "react-native";
 
 import { appService } from "@/api/appService";
 import { GlowBG } from "@/components/account/glow-bg";
 import { arrowLeft, delivery } from "@/icons";
-import { router, useFocusEffect, useNavigation } from "expo-router";
-import { useCallback, useState } from "react";
+import { useNavigation } from "expo-router";
+import { useMemo, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path, SvgXml } from "react-native-svg";
 import { useSelector } from "react-redux";
 
-import { format } from "date-fns";
 import { NoDataFound } from "@/components/account/no-data-found";
+import { useInfiniteQuery } from "@tanstack/react-query";
 
 const options = [
   {
@@ -104,27 +97,62 @@ const options = [
   },
 ];
 
+import ScalingDots from "@/components/scaling-dots";
+import { format, isThisWeek, isToday, isYesterday } from "date-fns";
+import { Skeleton } from "moti/skeleton";
+
+const getDateGroup = (dateString) => {
+  const date = new Date(dateString);
+
+  if (isToday(date)) return "Today";
+  if (isYesterday(date)) return "Yesterday";
+  if (isThisWeek(date)) return "This Week";
+
+  return format(date, "MMM d, yyyy");
+};
+
 export default function Alerts() {
   const app = useSelector((state: any) => state.app);
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState({});
 
   const navigation = useNavigation();
 
-  const fetchAlerts = async () => {
-    setLoading(true);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useInfiniteQuery({
+      queryKey: ["getAlerts"],
+      queryFn: appService.getAlerts,
+      getNextPageParam: (lastPage) => {
+        if (!lastPage.next_page_url) return undefined;
 
-    const res = await appService.getAlerts();
-    setLoading(false);
-    setData(res.data.data);
-    // console.log(res.data.data);
-  };
+        const url = new URL(lastPage.next_page_url);
+        let nextPage = Number(url.searchParams.get("page"));
+        return nextPage;
+      },
+    });
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchAlerts();
-    }, []),
-  );
+  // console.log("data 1", data);
+
+  const alerts = data?.pages.flatMap((page) => page.data) ?? [];
+
+  // console.log("data 2", alerts);
+
+  const sections = useMemo(() => {
+    const grouped = alerts.reduce((acc, item) => {
+      // console.log("item", item);
+
+      const key = getDateGroup(item.created_at);
+
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+
+      return acc;
+    }, {});
+
+    return Object.keys(grouped).map((key) => ({
+      title: key,
+      data: grouped[key],
+    }));
+  }, [alerts]);
   return (
     <View style={{ flex: 1 }}>
       <GlowBG />
@@ -134,18 +162,17 @@ export default function Alerts() {
           paddingHorizontal: 10,
         }}
       >
-        <ScrollView
+        <View
           style={{
             flex: 1,
           }}
-          showsVerticalScrollIndicator={false}
         >
           <View
             style={{
               flexDirection: "row",
               alignItems: "center",
               justifyContent: "space-between",
-              marginBottom: 10,
+              marginBottom: 0,
             }}
           >
             <View>
@@ -172,56 +199,41 @@ export default function Alerts() {
               <SvgXml xml={arrowLeft()} width={21} height={16} />
             </Pressable>
           </View>
-          {loading ? (
-            <View
-              style={{
-                flex: 1,
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-            >
-              <ActivityIndicator size="large" color="#FFDAAD" />
-            </View>
-          ) : Object.keys(data).length ? (
-            Object.keys(data).map((key) => (
-              <View key={key}>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginTop: 0,
-                    paddingHorizontal: 0,
-                  }}
-                >
-                  <Text
+          {!isLoading ? (
+            alerts.length ? (
+              <SectionList
+                sections={sections}
+                keyExtractor={(item, index) =>
+                  item.id?.toString() ?? index.toString()
+                }
+                showsVerticalScrollIndicator={false}
+                renderSectionHeader={({ section: { title } }) => (
+                  <View
                     style={{
-                      fontSize: 18,
-                      fontFamily: "HostGroteskBold",
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginTop: 10,
                     }}
                   >
-                    {key}
-                  </Text>
-                  <Pressable onPress={() => router.push("/account/category/1")}>
                     <Text
                       style={{
-                        color: "#A09F9F",
-                        fontSize: 16,
+                        fontSize: 18,
                         fontFamily: "HostGroteskBold",
                       }}
-                    ></Text>
-                  </Pressable>
-                </View>
-                {data[key].map((item, key) => (
+                    >
+                      {title}
+                    </Text>
+                  </View>
+                )}
+                renderItem={({ item }) => (
                   <View
                     style={{
                       flexDirection: "row",
                       justifyContent: "space-between",
                       paddingVertical: 10,
-                      paddingRight: 5,
-                      width: "100%",
+                      marginBottom: 20,
                     }}
-                    key={key}
                   >
                     <View
                       style={{
@@ -232,12 +244,8 @@ export default function Alerts() {
                       }}
                     >
                       {getIcon(item.data.data.icon ?? "rides")}
-                      <View
-                        style={{
-                          justifyContent: "center",
-                          flex: 1,
-                        }}
-                      >
+
+                      <View style={{ flex: 1 }}>
                         <Text
                           style={{
                             fontSize: 12,
@@ -247,54 +255,148 @@ export default function Alerts() {
                         >
                           {item.data.title}
                         </Text>
+
                         <Text
+                          numberOfLines={2}
                           style={{
                             fontSize: 12,
                             fontFamily: "HostGroteskBold",
                             color: "#9F9F9F",
-                            width: "100%",
                           }}
-                          numberOfLines={2}
                         >
                           {item.data.body}
                         </Text>
                       </View>
                     </View>
-                    <View
+
+                    <Text
                       style={{
-                        justifyContent: "flex-end",
-                        width: 60,
-                        // borderWidth: 1,
+                        fontSize: 12,
+                        fontFamily: "HostGroteskBold",
+                        color: "#808080",
                       }}
                     >
-                      <Text
-                        style={{
-                          fontSize: 12,
-                          fontFamily: "HostGroteskBold",
-                          marginBottom: 5,
-                        }}
-                      >
-                        {/* + ₦10,000 */}
-                      </Text>
-                      <Text
-                        style={{
-                          fontSize: 12,
-                          fontFamily: "HostGroteskBold",
-                          textAlign: "right",
-                          color: "#808080",
-                        }}
-                      >
-                        {format(item.created_at, "h:mm a")}
-                      </Text>
-                    </View>
+                      {format(item.created_at, "h:mm a")}
+                    </Text>
                   </View>
-                ))}
+                )}
+                // ✅ INFINITE SCROLL
+                onEndReached={() => {
+                  if (hasNextPage && !isFetchingNextPage) {
+                    fetchNextPage();
+                  }
+                }}
+                onEndReachedThreshold={0.3}
+                ListFooterComponent={
+                  isFetchingNextPage ? (
+                    <ScalingDots dotCount={3} dotSize={9} dotColor="#ccc" />
+                  ) : null
+                }
+              />
+            ) : (
+              <NoDataFound text={"No Alert Found"} />
+            )
+          ) : (
+            [1, 2, 3, 4, 5].map((item, key) => (
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  paddingVertical: 10,
+                  paddingRight: 20,
+                }}
+                key={key}
+              >
+                <View
+                  style={{
+                    flexDirection: "row",
+                    gap: 20,
+                    flex: 1,
+                    alignItems: "center",
+                  }}
+                >
+                  <Skeleton
+                    colorMode="light"
+                    height={48}
+                    width={48}
+                    radius={100}
+                  />
+                  <View
+                    style={{
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontFamily: "HostGroteskBold",
+                        marginBottom: 5,
+                      }}
+                    >
+                      <Skeleton
+                        colorMode="light"
+                        height={10}
+                        width={100}
+                        radius={3}
+                      />
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontFamily: "HostGroteskBold",
+                        textAlign: "center",
+                        color: "#9F9F9F",
+                      }}
+                      numberOfLines={2}
+                    >
+                      <Skeleton
+                        colorMode="light"
+                        height={10}
+                        width={150}
+                        radius={3}
+                      />
+                    </Text>
+                  </View>
+                </View>
+                <View
+                  style={{
+                    justifyContent: "center",
+                    width: 100,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontFamily: "HostGroteskBold",
+                      marginBottom: 6,
+                    }}
+                  >
+                    <Skeleton
+                      colorMode="light"
+                      height={10}
+                      width={100}
+                      radius={3}
+                    />
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontFamily: "HostGroteskBold",
+                      color: "#9F9F9F",
+                    }}
+                  >
+                    <Skeleton
+                      colorMode="light"
+                      height={10}
+                      width={100}
+                      radius={3}
+                    />
+                  </Text>
+                </View>
               </View>
             ))
-          ) : (
-            <NoDataFound text="You have no alerts" />
           )}
-        </ScrollView>
+        </View>
       </SafeAreaView>
     </View>
   );

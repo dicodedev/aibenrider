@@ -13,6 +13,22 @@ export const appService = {
     const res = await api.get(`transaction/all?per_page=5`);
     return res.data;
   },
+  createTicket: async (payload) => {
+    const res = await api.post("/ticket/create", payload);
+    return res.data;
+  },
+  getTicketMessages: async (id, page) => {
+    const res = await api.get(`/ticket/${id}/messages?page=${page}`);
+    return res.data;
+  },
+  getTickets: async ({ pageParam }) => {
+    const res = await api.get(`/ticket/all?per_page=5&page=${pageParam}`);
+    return res.data;
+  },
+  getTicketCategories: async () => {
+    const res = await api.get("/ticket/categories");
+    return res.data;
+  },
   getTransactions: async ({ pageParam = 1 }) => {
     console.log("p", pageParam);
 
@@ -35,23 +51,38 @@ export const appService = {
     const res = await api.get(`referral/all`);
     return res.data;
   },
-  getRecentRequests: async () => {
-    const res = await api.get(`/order/requests?per_page=5`);
+  getRecentRequests: async (latitude, longitude) => {
+    const url = `/order/requests?per_page=5&latitude=${latitude}&longitude=${longitude}`;
+
+    const res = await api.get(url);
+
+    // console.log("url", url, res.data);
+
     return res.data;
   },
-  getRequests: async ({ pageParam = 1, filter = null }) => {
+  getRequests: async ({
+    pageParam = 1,
+    filter = null,
+    latitude,
+    longitude,
+  }) => {
     // console.log("p", pageParam);
 
     const res = await api.get(
-      `/order/requests?page=${pageParam}&per_page=5${filter ? "&type=" + filter : ""}`,
+      `/order/requests?page=${pageParam}&per_page=5${filter ? "&type=" + filter : ""}&latitude=${latitude}&longitude=${longitude}`,
     );
     return res.data;
   },
-  getCompletedRequests: async ({ pageParam = 1, filter = null }) => {
+  getCompletedRequests: async ({
+    pageParam = 1,
+    filter = null,
+    latitude,
+    longitude,
+  }) => {
     console.log("p", pageParam);
 
     const res = await api.get(
-      `/order/requests?status=completed&page=${pageParam}${filter ? "&type=" + filter : ""}`,
+      `/order/completed-requests?status=completed&page=${pageParam}${filter ? "&type=" + filter : ""}`,
     );
     return res.data;
   },
@@ -61,6 +92,19 @@ export const appService = {
   },
   getCategory: async (id) => {
     const res = await api.get(`/vehicle_category/` + id);
+    return res.data;
+  },
+  getBankDetails: async (id) => {
+    const res = await api.get(`/bank-account/all`);
+    return res.data;
+  },
+  validateBankDetails: async (payload) => {
+    const res = await api.post(`/bank-account/validate`, payload);
+    // console.log("res", res.data, payload);
+    return res.data;
+  },
+  setBankDetails: async (payload) => {
+    const res = await api.post(`/bank-account/add`, payload);
     return res.data;
   },
   getVehicle: async (id) => {

@@ -1,0 +1,17 @@
+lane :upload do
+  app_store_connect_api_key(
+    key_id: "K83Q7AG63B",
+    issuer_id: "bd850693-5187-4024-b159-0538280b6ae6",
+    key_filepath: "./AuthKey_K83Q7AG63B.p8"
+  )
+
+#   upload_to_app_store(
+#     ipa: "/Users/mac/Downloads/application-a424e4ec-7128-40da-8afe-f745d0854635.ipa",
+#    submit_for_review: false,                 # ✅ correct option
+#     # skip_waiting_for_build_processing: true   
+#   )
+
+  pilot(
+    ipa: "/Users/mac/Downloads/application-0a191e48-5a9c-46a3-89ef-48f24fbfe529.ipa"  
+  )
+end

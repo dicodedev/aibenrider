@@ -29,21 +29,56 @@ const options = [
     text: "Profile",
     link: "/account/dashboard/account/profile",
   },
-  // {
-  //   icon: (
-  //     <Svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-  //       <Path
-  //         d="M1.88925 6.507L13.5493 0.954996C15.2493 0.144996 17.0233 1.92 16.2143 3.621L10.6623 15.28C9.90325 16.873 7.60325 16.775 6.98325 15.122L5.95725 12.383C5.857 12.1158 5.70072 11.8731 5.49892 11.6713C5.29712 11.4695 5.05446 11.3132 4.78725 11.213L2.04725 10.186C0.395253 9.566 0.296253 7.266 1.88925 6.507Z"
-  //         stroke="black"
-  //         stroke-width="1.5"
-  //         stroke-linecap="round"
-  //         stroke-linejoin="round"
-  //       />
-  //     </Svg>
-  //   ),
-  //   text: "Location Settings",
-  //   link: "/account/dashboard/account/locations",
-  // },
+  {
+    icon: (
+      <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <Path
+          d="M2.5 18.3333H17.5"
+          stroke="#2A2A2A"
+          stroke-width="1.66667"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <Path
+          d="M5 15V9.16669"
+          stroke="#2A2A2A"
+          stroke-width="1.66667"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <Path
+          d="M8.33398 15V9.16669"
+          stroke="#2A2A2A"
+          stroke-width="1.66667"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <Path
+          d="M11.666 15V9.16669"
+          stroke="#2A2A2A"
+          stroke-width="1.66667"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <Path
+          d="M15 15V9.16669"
+          stroke="#2A2A2A"
+          stroke-width="1.66667"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <Path
+          d="M10.0007 1.66669L16.6673 5.83335H3.33398L10.0007 1.66669Z"
+          stroke="#2A2A2A"
+          stroke-width="1.66667"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </Svg>
+    ),
+    text: "Bank Information",
+    link: "/account/dashboard/account/bank-account",
+  },
   // {
   //   icon: (
   //     <Svg width="20" height="21" viewBox="0 0 20 21" fill="none">

@@ -1,18 +1,20 @@
-import { Pressable, Text, View } from "react-native";
+import { FlatList, Image, Pressable, Text, View } from "react-native";
 
 import { appService } from "@/api/appService";
 import { NoDataFound } from "@/components/account/no-data-found";
 import { arrowLeft } from "@/icons";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { router } from "expo-router";
 import { Skeleton } from "moti/skeleton";
-import { useEffect, useState } from "react";
-import { Image, ScrollView } from "react-native";
+import { useState } from "react";
+import { ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { SvgXml } from "react-native-svg";
 import { useSelector } from "react-redux";
-
+import { formatAmount } from "@/utils/helper";
+import ScalingDots from "@/components/scaling-dots";
 import ProfilePicture from "@/assets/images/account/profile-picture.png";
-import { format } from "date-fns";
 
 export default function Earnings() {
   const app = useSelector((state: any) => state.app);
@@ -20,17 +22,22 @@ export default function Earnings() {
   const [openDelete, setOpenDelete] = useState(false);
   const [done, setDone] = useState(false);
 
-  const [referrals, setReferrals] = useState(null);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useInfiniteQuery({
+      queryKey: ["getReferrals"],
+      queryFn: appService.getReferrals,
+      getNextPageParam: (lastPage) => {
+        if (!lastPage.next_page_url) return undefined;
 
-  const fetchReferrals = async () => {
-    const res = await appService.getReferrals();
-    setReferrals(res.data);
-  };
+        const url = new URL(lastPage.next_page_url);
+        let nextPage = Number(url.searchParams.get("page"));
+        return nextPage;
+      },
+    });
 
-  useEffect(() => {
-    fetchReferrals();
-  }, []);
+  // console.log("data", data);
 
+  const referrals = data?.pages.flatMap((page) => page.data) ?? [];
   return (
     <View style={{ flex: 1 }}>
       <SafeAreaView
@@ -87,87 +94,119 @@ export default function Earnings() {
         >
           {referrals ? (
             referrals.length ? (
-              referrals.map((item, key) => (
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    paddingVertical: 10,
-                    paddingRight: 20,
-                    backgroundColor: "#fff",
-                    paddingHorizontal: 10,
-                    marginBottom: 10,
-                    borderRadius: 12,
-                    alignItems: "center",
-                  }}
-                  key={key}
-                >
+              <FlatList
+                style={{
+                  flex: 1,
+                }}
+                ItemSeparatorComponent={() => <View style={{ height: 0 }} />}
+                data={referrals}
+                showsVerticalScrollIndicator={false}
+                keyExtractor={(item, index) => item.id + `_` + index}
+                renderItem={({ item, index }) => (
                   <View
                     style={{
                       flexDirection: "row",
-                      gap: 20,
+                      justifyContent: "space-between",
+                      paddingVertical: 10,
+                      paddingRight: 20,
+                      backgroundColor: "#fff",
+                      paddingHorizontal: 10,
+                      marginBottom: 10,
+                      borderRadius: 12,
+                      alignItems: "center",
                     }}
                   >
                     <View
                       style={{
-                        width: 50,
-                        height: 50,
-                        backgroundColor: "#FFE9CE",
-                        borderRadius: "100%",
-                        justifyContent: "center",
-                        alignItems: "center",
+                        flexDirection: "row",
+                        gap: 20,
                       }}
                     >
-                      <Image
-                        source={
-                          item
-                            ? item?.picture != "null"
-                              ? { uri: item?.picture }
-                              : ProfilePicture
-                            : ProfilePicture
-                        }
+                      <View
                         style={{
-                          width: "100%",
-                          height: "100%",
-                          borderRadius: 100,
+                          width: 50,
+                          height: 50,
+                          backgroundColor: "#FFE9CE",
+                          borderRadius: "100%",
+                          justifyContent: "center",
+                          alignItems: "center",
                         }}
+                      >
+                        <Image
+                          source={
+                            item
+                              ? item?.picture != "null"
+                                ? { uri: item?.picture }
+                                : ProfilePicture
+                              : ProfilePicture
+                          }
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            borderRadius: 100,
+                          }}
+                        />
+                      </View>
+                      <View>
+                        <Text
+                          style={{
+                            fontSize: 16,
+                            fontFamily: "HostGroteskBold",
+                            marginBottom: 3,
+                          }}
+                        >
+                          {item.name}
+                        </Text>
+                        <Text
+                          style={{
+                            color: "#686868",
+                            fontSize: 12,
+                            fontFamily: "HostGroteskBold",
+                          }}
+                        >
+                          Joined on{" "}
+                          {format(
+                            new Date(item.created_at),
+                            "do 'of' MMMM, yyyy",
+                          )}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontFamily: "HostGroteskBold",
+                      }}
+                    >
+                      {formatAmount(item.orders_count)} Orders
+                    </Text>
+                  </View>
+                )}
+                onEndReached={() => {
+                  if (hasNextPage) fetchNextPage();
+                }}
+                onEndReachedThreshold={0.2} //0.2
+                ListFooterComponent={
+                  isFetchingNextPage ? (
+                    <View
+                      style={{
+                        marginTop: 0,
+                      }}
+                    >
+                      <ScalingDots
+                        dotCount={3}
+                        dotSize={9}
+                        dotColor="#ccc"
+                        speed={300}
+                        style={{
+                          marginVertical: 5,
+                        }}
+                        scaleRange={[1, 1.5]}
                       />
                     </View>
-                    <View>
-                      <Text
-                        style={{
-                          fontSize: 16,
-                          fontFamily: "HostGroteskBold",
-                          marginBottom: 3,
-                        }}
-                      >
-                        {item.name}
-                      </Text>
-                      <Text
-                        style={{
-                          color: "#686868",
-                          fontSize: 12,
-                          fontFamily: "HostGroteskBold",
-                        }}
-                      >
-                        Joined on{" "}
-                        {format(
-                          new Date(item.created_at),
-                          "do 'of' MMMM, yyyy",
-                        )}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      fontFamily: "HostGroteskBold",
-                    }}
-                  >
-                    {item.orders_count} Orders
-                  </Text>
-                </View>
-              ))
+                  ) : null
+                }
+              />
             ) : (
               <NoDataFound text={"No referral found"} />
             )

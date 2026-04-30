@@ -1096,7 +1096,7 @@ const Four = ({
                 paddingVertical: 20,
                 borderRadius: 12,
               }}
-              onPress={() => {}}
+              onPress={() => router.back()}
             >
               <Text
                 style={{
